@@ -1,20 +1,29 @@
-BUILD_DIR := ./build
-SRC_DIR := ./TextEditor.Win32
-SRCS := #(shell find $(SRC_DIR) -name '*.cpp')
-OBJS:= $(SRCS:%=$(BUILD_DIR)/%.o)
-DEPS := $(OBJS:.o=.d)
-CPPFLAGS := -Wall -Wextra -pedantic -O3
+#Shamelessly ChatGPT ahh makefile.
 
-$(BUILD_DIR)/TextEditor.exe: $(OBJS)
-	$(CXX) $(OBJS) -o $@
+SRC_DIR = ./TextEditor.Win32
+BUILD_DIR = ./bin
 
-$(BUILD_DIR)/%.cpp.o: %.cpp
-	mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+CXX = g++
+CXXFLAGS = -Wall -Wextra -pedantic -O3 -std=c++11
 
-.PHONY: clean
+TARGET = $(BUILD_DIR)/TextEditor.exe
+SRCS = $(wildcard $(SRC_DIR)/*.cpp)
+OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR)/%.o)
+
+.PHONY: all
+
+all: $(TARGET)
+
+$(BUILD_DIR):
+	@echo "2"
+	mkdir -p $(BUILD_DIR)
+
+$(TARGET): $(OBJS) | $(BUILD_DIR)
+	@echo "1"
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+$(OBJS): $(SRCS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -r $(BUILD_DIR)
-
--include $(DEPS)
+	rm -rf $(BUILD_DIR)
