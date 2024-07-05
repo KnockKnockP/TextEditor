@@ -5,7 +5,7 @@ BUILD_DIR = ./bin
 
 CXX = g++
 CXXFLAGS = -Wall -Wextra -pedantic -O3 -std=c++14
-LINKS = -lgdi32
+LINKS = -lgdi32 -static
 
 TARGET = $(BUILD_DIR)/TextEditor.exe
 SRCS = $(wildcard $(SRC_DIR)/*.cpp)
@@ -16,7 +16,6 @@ OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR)/%.o)
 all: $(TARGET)
 
 $(BUILD_DIR):
-	@echo "2"
 	mkdir -p $(BUILD_DIR)
 
 $(TARGET): $(OBJS) | $(BUILD_DIR)
