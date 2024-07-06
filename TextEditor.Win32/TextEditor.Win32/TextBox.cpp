@@ -11,6 +11,7 @@ LRESULT CALLBACK TextBox::Callback(HWND hwnd,
                                    LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE:
+#if _WIN32_WINNT > _WIN32_WINNT_NT4
             if (!AddFontResourceEx(fontFile,
                                    FR_PRIVATE,
                                    NULL)) {
@@ -40,6 +41,7 @@ LRESULT CALLBACK TextBox::Callback(HWND hwnd,
                            TEXT("Error"),
                            (MB_OK | MB_ICONERROR));
             }
+#endif
             return 0;
 
         case WM_PAINT: {
@@ -53,12 +55,14 @@ LRESULT CALLBACK TextBox::Callback(HWND hwnd,
                 return 0;
             }
 
+#if _WIN32_WINNT > _WIN32_WINNT_NT4
             if (!SelectObject(hdc, font)) {
                 MessageBox(NULL,
                            TEXT("Failed to select main window's text box's font."),
                            TEXT("Error"),
                            (MB_OK | MB_ICONERROR));
             }
+#endif
 
             if (!FillRect(hdc,
                           &paintStruct.rcPaint,
