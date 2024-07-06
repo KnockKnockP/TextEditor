@@ -6,7 +6,7 @@ RESOURCES_DIR = $(SOURCE_DIR)/Resources
 BUILD_DIR = ./bin
 
 CXX = g++
-CXXFLAGS = -Wall -Wextra -pedantic -O3 -std=c++14 -DUNICODE WINDOWS_VERSION
+CXXFLAGS = -Wall -Wextra -pedantic -O3 -std=c++14 -DUNICODE $(WINDOWS_VERSION)
 LINKS = -lgdi32 -static
 
 TARGET = $(BUILD_DIR)/TextEditor.exe

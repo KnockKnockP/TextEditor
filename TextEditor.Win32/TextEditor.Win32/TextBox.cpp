@@ -89,8 +89,10 @@ LRESULT CALLBACK TextBox::Callback(HWND hwnd,
         }
 
         case WM_DESTROY:
+#if _WIN32_WINNT > _WIN32_WINNT_NT4
             DeleteObject(font);
             RemoveFontResourceEx(fontFile, FR_PRIVATE, 0);
+#endif
             return 0;
     }
 
