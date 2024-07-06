@@ -4,11 +4,9 @@
 
 class TextBox {
 private:
-	static TextBox *singleton;
-
-	HWND hwnd{ NULL };
-	LPCTSTR fontFile{ NULL }, fontName{ NULL };
-	HFONT font{ NULL };
+	static HWND hwnd;
+	static LPCTSTR fontFile, fontName;
+	static HFONT font;
 
 	static LRESULT CALLBACK Callback(HWND hwnd,
 									 UINT uMsg,

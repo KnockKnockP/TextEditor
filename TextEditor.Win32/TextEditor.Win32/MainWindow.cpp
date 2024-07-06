@@ -1,33 +1,33 @@
 #include <MainWindow.hpp>
 #include <WindowsHelper.hpp>
 
-MainWindow *MainWindow::singleton{ nullptr };
+HWND MainWindow::hwnd{ NULL };
+UINT MainWindow::width{ 0 }, MainWindow::height{ 0 };
+TextBox MainWindow::textBox;
 
 LRESULT CALLBACK MainWindow::Callback(HWND hwnd,
                                       UINT uMsg,
                                       WPARAM wParam,
                                       LPARAM lParam) {
-    MainWindow *s{ MainWindow::singleton };
-
     switch (uMsg) {
         case WM_CREATE:
-            s->textBox = TextBox(s->width,
-                                 s->height,
-                                 hwnd,
-                                 TEXT(".\\KurintoMono-Rg.ttf"),
-                                 TEXT("Kurinto Mono"));
+            textBox = TextBox(width,
+                              height,
+                              hwnd,
+                              TEXT("unifont-15.1.05.otf"),
+                              TEXT("Unifont"));
             return 0;
 
         case WM_SIZE:
-            s->width = LOWORD(lParam);
-            s->height = HIWORD(lParam);
+            width = LOWORD(lParam);
+            height = HIWORD(lParam);
 
-            SetWindowPos(s->textBox.GetHwnd(),
+            SetWindowPos(textBox.GetHwnd(),
                          NULL,
                          0,
                          0,
-                         s->width,
-                         s->height,
+                         width,
+                         height,
                          (SWP_NOREPOSITION | SWP_NOZORDER));
             return 0;
 
@@ -52,8 +52,6 @@ LRESULT CALLBACK MainWindow::Callback(HWND hwnd,
 }
 
 MainWindow::MainWindow(void) {
-    singleton = this;
-
     const ATOM registered = WindowsHelper::Register(Callback, TEXT("Text Editor"));
     if (!registered) {
         MessageBox(NULL,

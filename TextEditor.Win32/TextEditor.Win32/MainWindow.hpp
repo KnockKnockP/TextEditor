@@ -5,11 +5,9 @@
 
 class MainWindow {
 private:
-	static MainWindow *singleton;
-
-	HWND hwnd{ NULL };
-	UINT width{ 0 }, height{ 0 };
-	TextBox textBox;
+	static HWND hwnd;
+	static UINT width, height;
+	static TextBox textBox;
 
 	static LRESULT CALLBACK Callback(HWND hwnd,
 									 UINT uMsg,

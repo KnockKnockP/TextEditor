@@ -1,17 +1,17 @@
 #include <TextBox.hpp>
 #include <WindowsHelper.hpp>
 
-TextBox *TextBox::singleton{ nullptr };
+HWND TextBox::hwnd{ NULL };
+LPCTSTR TextBox::fontFile{NULL}, TextBox::fontName{NULL};
+HFONT TextBox::font{ NULL };
 
 LRESULT CALLBACK TextBox::Callback(HWND hwnd,
                                    UINT uMsg,
                                    WPARAM wParam,
                                    LPARAM lParam) {
-    TextBox *s{ (TextBox *)(singleton) };
-
     switch (uMsg) {
         case WM_CREATE:
-            if (!AddFontResourceEx(s->fontFile,
+            if (!AddFontResourceEx(fontFile,
                                    FR_PRIVATE,
                                    NULL)) {
                 MessageBox(NULL,
@@ -20,21 +20,21 @@ LRESULT CALLBACK TextBox::Callback(HWND hwnd,
                            (MB_OK | MB_ICONERROR));
             }
 
-            s->font = CreateFont(0,
-                                 0,
-                                 0,
-                                 0,
-                                 0,
-                                 FALSE,
-                                 FALSE,
-                                 FALSE,
-                                 DEFAULT_CHARSET,
-                                 OUT_DEFAULT_PRECIS,
-                                 CLIP_DEFAULT_PRECIS,
-                                 DEFAULT_QUALITY,
-                                 FF_DONTCARE,
-                                 s->fontName);
-            if (!s->font) {
+            font = CreateFont(0,
+                              0,
+                              0,
+                              0,
+                              0,
+                              FALSE,
+                              FALSE,
+                              FALSE,
+                              DEFAULT_CHARSET,
+                              OUT_DEFAULT_PRECIS,
+                              CLIP_DEFAULT_PRECIS,
+                              ANTIALIASED_QUALITY,
+                              FF_DONTCARE,
+                              fontName);
+            if (!font) {
                 MessageBox(NULL,
                            TEXT("Failed to create main window's text box's font."),
                            TEXT("Error"),
@@ -53,7 +53,7 @@ LRESULT CALLBACK TextBox::Callback(HWND hwnd,
                 return 0;
             }
 
-            if (!SelectObject(hdc, s->font)) {
+            if (!SelectObject(hdc, font)) {
                 MessageBox(NULL,
                            TEXT("Failed to select main window's text box's font."),
                            TEXT("Error"),
@@ -85,8 +85,8 @@ LRESULT CALLBACK TextBox::Callback(HWND hwnd,
         }
 
         case WM_DESTROY:
-            DeleteObject(s->font);
-            RemoveFontResource(s->fontFile);
+            DeleteObject(font);
+            RemoveFontResourceEx(fontFile, FR_PRIVATE, 0);
             return 0;
     }
 
@@ -103,8 +103,6 @@ TextBox::TextBox(UINT width,
                  HWND parent,
                  LPCTSTR fontFile,
                  LPCTSTR fontName) {
-    singleton = this;
-
     this->fontFile = fontFile;
     this->fontName = fontName;
 

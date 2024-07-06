@@ -84,14 +84,14 @@
     <ClCompile Include="WindowsHelper.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="Resources\KurintoMono-Rg.ttf">
-      <FileType>Document</FileType>
-    </CopyFileToFolders>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="MainWindow.hpp" />
     <ClInclude Include="TextBox.hpp" />
     <ClInclude Include="WindowsHelper.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="Resources\unifont-15.1.05.otf">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
