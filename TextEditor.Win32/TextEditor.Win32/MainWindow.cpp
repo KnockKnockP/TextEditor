@@ -54,7 +54,7 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd,
 }
 
 MainWindow::MainWindow(void) {
-    WindowsHelper::ErrorMessage("Test");
+    WindowsHelper::ErrorMessage("Test 테스트");
 
     const ATOM registered{ WindowsHelper::Register(Callback, "Text Editor") };
     if (!registered) {
