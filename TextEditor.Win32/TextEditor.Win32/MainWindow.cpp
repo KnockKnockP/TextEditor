@@ -54,16 +54,16 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd,
                          lParam);
 }
 
-#include <fstream>
-
 MainWindow::MainWindow(void) {
+    WindowsHelper::ErrorMessage("Test 테스트");
+
     const ATOM registered{ WindowsHelper::Register(Callback, "Text Editor") };
     if (!registered) {
         WindowsHelper::ErrorMessage("Failed to register main window's class.");
     }
 
     const std::wstring wstring{ StringUtils::ToUTF16("Text Editor / 문서 편집기") };
-    hwnd = CreateWindowW(MAKEINTATOM(registered),
+    hwnd = CreateWindowW((LPWSTR)(MAKEINTATOM(registered)),
                          wstring.c_str(),
                          WS_OVERLAPPEDWINDOW,
                          CW_USEDEFAULT,
