@@ -1,28 +1,14 @@
 #include <StringUtils.hpp>
+#include <codecvt>
 
 std::wstring StringUtils::ToUTF16(const std::string &string) {
-    int size{ MultiByteToWideChar(CP_UTF8,
-                                  MB_PRECOMPOSED,
-                                  string.c_str(),
-                                  -1,
-                                  NULL,
-                                  0) };
-    LPWSTR wstring{ new WCHAR[size] };
-
-    MultiByteToWideChar(CP_UTF8,
-                        MB_PRECOMPOSED,
-                        string.c_str(),
-                        -1,
-                        wstring,
-                        size);
-
-    std::wstring final{ wstring };
-    delete[] wstring;
-
-    return final;
+    std::wstring_convert<std::codecvt_utf8_utf16<WCHAR>> converter;
+    return converter.from_bytes(string);
 }
 
 std::string StringUtils::ToMB(const std::string &string) {
+    return "StringUtils::ToMB";
+
     const std::wstring wstring{ std::wstring(string.begin(), string.end()) };
     
     int size{ WideCharToMultiByte(CP_ACP,

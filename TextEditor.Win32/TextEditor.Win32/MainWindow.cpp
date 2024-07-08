@@ -33,11 +33,10 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd,
             return 0;
 
         case WM_CLOSE: {
-            const std::wstring title{ StringUtils::ToUTF16("정말로 종료하시겠습니까?") }, contents{ StringUtils::ToUTF16("Are you sure you want to quit?") };
-            if (MessageBoxW(hwnd,
-                            contents.c_str(),
-                            title.c_str(),
-                            MB_OKCANCEL) == IDOK) {
+            if (MessageBox(hwnd,
+                           TEXT("정말로 종료하시겠습니까?"),
+                           TEXT("Are you sure you want to quit?"),
+                           MB_OKCANCEL) == IDOK) {
                 DestroyWindow(hwnd);
             }
             return 0;
@@ -55,24 +54,13 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd,
 }
 
 MainWindow::MainWindow(void) {
-    //MessageBox(NULL, TEXT("Test"), TEXT("테스트"), MB_OK);
-    //MessageBoxW(NULL, L"Test", L"테스트", MB_OK);
-    
-    const std::wstring b = StringUtils::ToUTF16("테스트");
-    MessageBoxW(NULL, L"UTF16", b.c_str(), MB_OK);
-    //const std::string a = StringUtils::ToMB(std::string(b.begin(), b.end()));
-    //MessageBoxA(NULL, "Test", a.c_str(), MB_OK);
-    return;
-    //WindowsHelper::ErrorMessage("Test 테스트");
-
     const ATOM registered{ WindowsHelper::Register(Callback, "Text Editor") };
     if (!registered) {
         WindowsHelper::ErrorMessage("Failed to register main window's class.");
     }
 
-    const std::wstring wstring{ StringUtils::ToUTF16("Text Editor / 문서 편집기") };
-    hwnd = CreateWindowW((LPWSTR)(MAKEINTATOM(registered)),
-                         wstring.c_str(),
+    hwnd = CreateWindowW(MAKEINTATOM(registered),
+                         TEXT("Text Editor / 문서 편집기"),
                          WS_OVERLAPPEDWINDOW,
                          CW_USEDEFAULT,
                          CW_USEDEFAULT,
