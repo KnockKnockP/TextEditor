@@ -54,6 +54,8 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd,
 }
 
 MainWindow::MainWindow(void) {
+    WindowsHelper::ErrorMessage("Test");
+
     const ATOM registered{ WindowsHelper::Register(Callback, "Text Editor") };
     if (!registered) {
         WindowsHelper::ErrorMessage("Failed to register main window's class.");
