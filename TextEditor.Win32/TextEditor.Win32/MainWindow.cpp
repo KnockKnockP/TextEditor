@@ -59,7 +59,7 @@ MainWindow::MainWindow(void) {
         WindowsHelper::ErrorMessage("Failed to register main window's class.");
     }
 
-    hwnd = CreateWindowW(MAKEINTATOM(registered),
+    hwnd = CreateWindowW((LPWSTR)MAKEINTATOM(registered),
                          TEXT("Text Editor / 문서 편집기"),
                          WS_OVERLAPPEDWINDOW,
                          CW_USEDEFAULT,

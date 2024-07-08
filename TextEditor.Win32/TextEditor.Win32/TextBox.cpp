@@ -110,7 +110,7 @@ TextBox::TextBox(const UINT width,
         WindowsHelper::ErrorMessage("Failed to register main window's text box's class.");
     }
 
-    hwnd = CreateWindow(MAKEINTATOM(registered),
+    hwnd = CreateWindow((LPWSTR)MAKEINTATOM(registered),
                         NULL,
                         (WS_CHILD | WS_VISIBLE),
                         0,
