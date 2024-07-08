@@ -62,7 +62,8 @@ MainWindow::MainWindow(const HINSTANCE hInstance) {
                    (MB_OK | MB_ICONERROR));
     }
 
-    hwnd = CreateWindow(MAKEINTATOM(registered),
+    hwnd = CreateWindow(//MAKEINTATOM(registered),
+                        TEXT("Text Editor"),
                         TEXT("Text Editor / 문서 편집기"),
                         WS_OVERLAPPEDWINDOW,
                         CW_USEDEFAULT,
