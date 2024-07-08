@@ -5,10 +5,10 @@ HWND TextBox::hwnd{ NULL };
 LPCTSTR TextBox::fontFile{NULL}, TextBox::fontName{NULL};
 HFONT TextBox::font{ NULL };
 
-LRESULT CALLBACK TextBox::Callback(HWND hwnd,
-                                   UINT uMsg,
-                                   WPARAM wParam,
-                                   LPARAM lParam) {
+LRESULT CALLBACK TextBox::Callback(const HWND hwnd,
+                                   const UINT uMsg,
+                                   const WPARAM wParam,
+                                   const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE:
 #if _WIN32_WINNT > _WIN32_WINNT_NT4
@@ -112,7 +112,9 @@ TextBox::TextBox(UINT width,
     this->fontFile = fontFile;
     this->fontName = fontName;
 
-    ATOM registered = WindowsHelper::Register(Callback, TEXT("TextBox"));
+    ATOM registered = WindowsHelper::Register(Callback,
+                                              TEXT("TextBox"),
+                                              NULL);
     if (!registered) {
         MessageBox(NULL,
                    TEXT("Failed to register main window's text box's class."),

@@ -79,8 +79,6 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainWindow.cpp" />
     <ClCompile Include="TextBox.cpp" />
-    <ClCompile Include="Window.cpp" />
-    <ClCompile Include="Window.hpp" />
     <ClCompile Include="WindowsHelper.cpp" />
   </ItemGroup>
   <ItemGroup>

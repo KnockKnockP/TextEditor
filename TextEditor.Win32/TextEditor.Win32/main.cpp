@@ -5,7 +5,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
                      LPSTR lpCmdLine,
                      int nShowCmd) {
-    MainWindow mainWindow;
+    const MainWindow mainWindow(hInstance);
     mainWindow.Show();
 
     MSG msg = {};

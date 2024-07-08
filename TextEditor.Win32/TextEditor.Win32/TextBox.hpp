@@ -8,10 +8,10 @@ private:
 	static LPCTSTR fontFile, fontName;
 	static HFONT font;
 
-	static LRESULT CALLBACK Callback(HWND hwnd,
-									 UINT uMsg,
-									 WPARAM wParam,
-									 LPARAM lParam);
+	static LRESULT CALLBACK Callback(const HWND hwnd,
+									 const UINT uMsg,
+									 const WPARAM wParam,
+									 const LPARAM lParam);
 
 public:
 	TextBox(void);

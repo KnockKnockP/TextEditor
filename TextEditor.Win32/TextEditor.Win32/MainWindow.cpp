@@ -5,10 +5,10 @@ HWND MainWindow::hwnd{ NULL };
 UINT MainWindow::width{ 0 }, MainWindow::height{ 0 };
 TextBox MainWindow::textBox;
 
-LRESULT CALLBACK MainWindow::Callback(HWND hwnd,
-                                      UINT uMsg,
-                                      WPARAM wParam,
-                                      LPARAM lParam) {
+LRESULT CALLBACK MainWindow::Callback(const HWND hwnd,
+                                      const UINT uMsg,
+                                      const WPARAM wParam,
+                                      const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE:
             textBox = TextBox(width,
@@ -51,8 +51,10 @@ LRESULT CALLBACK MainWindow::Callback(HWND hwnd,
                          lParam);
 }
 
-MainWindow::MainWindow(void) {
-    const ATOM registered = WindowsHelper::Register(Callback, TEXT("Text Editor"));
+MainWindow::MainWindow(const HINSTANCE hInstance) {
+    const ATOM registered = WindowsHelper::Register(Callback,
+                                                    TEXT("Text Editor"),
+                                                    hInstance);
     if (!registered) {
         MessageBox(NULL,
                    TEXT("Failed to register main window's class."),
@@ -69,7 +71,7 @@ MainWindow::MainWindow(void) {
                         CW_USEDEFAULT,
                         NULL,
                         NULL,
-                        NULL,
+                        hInstance,
                         NULL);
     if (!hwnd) {
         MessageBox(NULL,

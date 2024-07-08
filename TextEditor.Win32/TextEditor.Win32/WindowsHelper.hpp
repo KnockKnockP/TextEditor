@@ -4,5 +4,7 @@
 
 class WindowsHelper {
 public:
-	static ATOM Register(const WNDPROC callback, const LPCTSTR name);
+	static ATOM Register(const WNDPROC callback,
+						 const LPCTSTR name,
+						 const HINSTANCE hInstance);
 };

@@ -9,12 +9,12 @@ private:
 	static UINT width, height;
 	static TextBox textBox;
 
-	static LRESULT CALLBACK Callback(HWND hwnd,
-									 UINT uMsg,
-									 WPARAM wParam,
-									 LPARAM lParam);
+	static LRESULT CALLBACK Callback(const HWND hwnd,
+									 const UINT uMsg,
+									 const WPARAM wParam,
+									 const LPARAM lParam);
 
 public:
-	MainWindow(void);
+	MainWindow(const HINSTANCE hInstance);
 	void Show(void) const;
 };
