@@ -14,8 +14,12 @@ ATOM WindowsHelper::Register(const WNDPROC callback, const std::string &name) {
 #include <fstream>
 
 void WindowsHelper::ErrorMessage(const std::string &contents) {
-    //const std::wstring wstring{ StringUtils::ToUTF16(contents) };
-    const std::wstring wstring{ contents.begin(), contents.end() };
+    const std::wstring wstring{ StringUtils::ToUTF16(contents) };
+    //const std::wstring wstring{ contents.begin(), contents.end() };
+
+    std::ofstream a;
+    a.open("file.bin", std::ios::binary | std::ios::out);
+    a.write(contents.c_str(), contents.size());
 
     MessageBox(NULL,
                wstring.c_str(),
