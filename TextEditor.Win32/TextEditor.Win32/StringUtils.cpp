@@ -25,7 +25,7 @@ std::wstring StringUtils::ToUTF16(const std::string &string) {
 std::string StringUtils::ToMB(const std::string &string) {
     const std::wstring wstring{ std::wstring(string.begin(), string.end()) };
     
-    int size{ WideCharToMultiByte(CP_UTF8,
+    int size{ WideCharToMultiByte(CP_ACP,
                                   WC_COMPOSITECHECK,
                                   wstring.c_str(),
                                   -1,
@@ -35,7 +35,7 @@ std::string StringUtils::ToMB(const std::string &string) {
                                   NULL) };
     LPSTR mbString{ new CHAR[size] };
 
-    WideCharToMultiByte(CP_UTF8,
+    WideCharToMultiByte(CP_ACP,
                         WC_COMPOSITECHECK,
                         wstring.c_str(),
                         -1,

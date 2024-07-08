@@ -55,9 +55,13 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd,
 }
 
 MainWindow::MainWindow(void) {
-    MessageBox(NULL, TEXT("Test"), TEXT("테스트"), MB_OK);
-    MessageBoxW(NULL, L"Test", L"테스트", MB_OK);
-    MessageBoxA(NULL, "Test", "테스트", MB_OK);
+    //MessageBox(NULL, TEXT("Test"), TEXT("테스트"), MB_OK);
+    //MessageBoxW(NULL, L"Test", L"테스트", MB_OK);
+    
+    const std::wstring b = StringUtils::ToUTF16("테스트");
+    MessageBoxW(NULL, L"UTF16", b.c_str(), MB_OK);
+    //const std::string a = StringUtils::ToMB(std::string(b.begin(), b.end()));
+    //MessageBoxA(NULL, "Test", a.c_str(), MB_OK);
     return;
     //WindowsHelper::ErrorMessage("Test 테스트");
 
