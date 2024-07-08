@@ -21,3 +21,7 @@ std::wstring StringUtils::ToUTF16(const std::string &string) {
 
     return final;
 }
+
+std::wstring StringUtils::InPlace(const std::string &string) {
+    return std::wstring(string.begin(), string.end());
+}

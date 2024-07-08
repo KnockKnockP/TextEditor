@@ -12,7 +12,8 @@ ATOM WindowsHelper::Register(const WNDPROC callback, const std::string &name) {
 }
 
 void WindowsHelper::ErrorMessage(const std::string &contents) {
-    const std::wstring wstring{ StringUtils::ToUTF16(contents) };
+    /* const std::wstring wstring{StringUtils::ToUTF16(contents)}; */
+    const std::wstring wstring{ StringUtils::InPlace(contents) };
 
     MessageBoxW(NULL,
                 wstring.c_str(),
