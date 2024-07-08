@@ -112,9 +112,7 @@ TextBox::TextBox(UINT width,
     this->fontFile = fontFile;
     this->fontName = fontName;
 
-    ATOM registered = WindowsHelper::Register(Callback,
-                                              TEXT("TextBox"),
-                                              NULL);
+    ATOM registered = WindowsHelper::Register(Callback, "TextBox");
     if (!registered) {
         MessageBox(NULL,
                    TEXT("Failed to register main window's text box's class."),

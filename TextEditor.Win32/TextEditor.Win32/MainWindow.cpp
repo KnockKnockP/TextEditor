@@ -1,5 +1,6 @@
 #include <MainWindow.hpp>
 #include <WindowsHelper.hpp>
+#include <StringUtilities.hpp>
 
 HWND MainWindow::hwnd{ NULL };
 UINT MainWindow::width{ 0 }, MainWindow::height{ 0 };
@@ -51,10 +52,9 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd,
                          lParam);
 }
 
-MainWindow::MainWindow(const HINSTANCE hInstance) {
-    const ATOM registered = WindowsHelper::Register(Callback,
-                                                    TEXT("Text Editor"),
-                                                    hInstance);
+MainWindow::MainWindow(void) {
+    const std::string utfClass = TT("Text Editor 안녕");
+    const ATOM registered = WindowsHelper::Register(Callback, "");
     if (!registered) {
         MessageBox(NULL,
                    TEXT("Failed to register main window's class."),
@@ -71,7 +71,7 @@ MainWindow::MainWindow(const HINSTANCE hInstance) {
                         CW_USEDEFAULT,
                         NULL,
                         NULL,
-                        hInstance,
+                        NULL,
                         NULL);
     if (!hwnd) {
         MessageBox(NULL,

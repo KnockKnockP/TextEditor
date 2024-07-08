@@ -15,6 +15,6 @@ private:
 									 const LPARAM lParam);
 
 public:
-	MainWindow(const HINSTANCE hInstance);
+	MainWindow(void);
 	void Show(void) const;
 };

@@ -1,11 +1,14 @@
-#include <Windows.h>
+﻿#include <Windows.h>
 #include <MainWindow.hpp>
+#include <StringUtilities.hpp>
 
-int APIENTRY WinMain(HINSTANCE hInstance,
-                     HINSTANCE hPrevInstance,
-                     LPSTR lpCmdLine,
-                     int nShowCmd) {
-    const MainWindow mainWindow(NULL);
+int APIENTRY WinMain(const HINSTANCE hInstance,
+                     const HINSTANCE hPrevInstance,
+                     const LPSTR lpCmdLine,
+                     const int nShowCmd) {
+    MessageBoxW(NULL, L"안녕 Hello", L"Hello 안녕", MB_OK);
+    return 0;
+    const MainWindow mainWindow;
     mainWindow.Show();
 
     MSG msg = {};
