@@ -1,52 +1,19 @@
 #include <StringUtils.hpp>
 
-std::wstring StringUtils::ToUTF16(const std::string &string) {
+std::wstring StringUtils::ToUTF16(const std::string &utf8) {
     int size{ MultiByteToWideChar(CP_UTF8,
-                                  MB_PRECOMPOSED,
-                                  string.c_str(),
+                                  0,
+                                  utf8.c_str(),
                                   -1,
                                   NULL,
                                   0) };
-    LPWSTR wstring{ new WCHAR[size] };
 
+    std::wstring utf16(size, 0);
     MultiByteToWideChar(CP_UTF8,
-                        MB_PRECOMPOSED,
-                        string.c_str(),
-                        -1,
-                        wstring,
-                        size);
-
-    std::wstring final{ wstring };
-    delete[] wstring;
-
-    return final;
-}
-
-std::string StringUtils::ToMB(const std::string &string) {
-    return "StringUtils::ToMB";
-
-    const std::wstring wstring{ std::wstring(string.begin(), string.end()) };
-    
-    int size{ WideCharToMultiByte(CP_ACP,
-                                  WC_COMPOSITECHECK,
-                                  wstring.c_str(),
-                                  -1,
-                                  NULL,
-                                  0,
-                                  NULL,
-                                  NULL) };
-    LPSTR mbString{ new CHAR[size] };
-
-    WideCharToMultiByte(CP_ACP,
-                        WC_COMPOSITECHECK,
-                        wstring.c_str(),
-                        -1,
-                        mbString,
                         0,
-                        NULL,
-                        NULL);
-    std::string final{ mbString };
-    delete[] mbString;
-
-    return final;
+                        utf8.c_str(),
+                        -1,
+                        &utf16[0],
+                        size);
+    return utf16;
 }

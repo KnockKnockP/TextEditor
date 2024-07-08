@@ -15,27 +15,27 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd,
 #if _WIN32_WINNT > _WIN32_WINNT_NT4
             const std::wstring wFontFile{ StringUtils::ToUTF16(fontFile)};
 
-            if (!AddFontResourceEx(wFontFile.c_str(),
-                                   FR_PRIVATE,
-                                   NULL)) {
+            if (!AddFontResourceExW(wFontFile.c_str(),
+                                    FR_PRIVATE,
+                                    NULL)) {
                 WindowsHelper::ErrorMessage("Failed to add main window's text box's font file.");
             }
 
             const std::wstring wFontName{ StringUtils::ToUTF16(fontName) };
-            font = CreateFont(0,
-                              0,
-                              0,
-                              0,
-                              0,
-                              FALSE,
-                              FALSE,
-                              FALSE,
-                              DEFAULT_CHARSET,
-                              OUT_DEFAULT_PRECIS,
-                              CLIP_DEFAULT_PRECIS,
-                              ANTIALIASED_QUALITY,
-                              FF_DONTCARE,
-                              wFontName.c_str());
+            font = CreateFontW(0,
+                               0,
+                               0,
+                               0,
+                               0,
+                               FALSE,
+                               FALSE,
+                               FALSE,
+                               DEFAULT_CHARSET,
+                               OUT_DEFAULT_PRECIS,
+                               CLIP_DEFAULT_PRECIS,
+                               ANTIALIASED_QUALITY,
+                               FF_DONTCARE,
+                               wFontName.c_str());
             if (!font) {
                 WindowsHelper::ErrorMessage("Failed to create main window's text box's font.");
             }
@@ -64,11 +64,11 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd,
             }
 
             const std::wstring text{ StringUtils::ToUTF16("Test / 테스트 / テスト") };
-            if (!DrawText(hdc,
-                          text.c_str(),
-                          -1,
-                          &paintStruct.rcPaint,
-                          DT_CENTER)) {
+            if (!DrawTextW(hdc,
+                           text.c_str(),
+                           -1,
+                           &paintStruct.rcPaint,
+                           DT_CENTER)) {
                 WindowsHelper::ErrorMessage("Failed to fill main window's text box's text.");
             }
 
@@ -81,18 +81,18 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd,
             DeleteObject(font);
 
             const std::wstring wFontFile{ StringUtils::ToUTF16(fontFile) };
-            RemoveFontResourceEx(wFontFile.c_str(),
-                                 FR_PRIVATE,
-                                 0);
+            RemoveFontResourceExW(wFontFile.c_str(),
+                                  FR_PRIVATE,
+                                  0);
 #endif
             return 0;
         }
     }
 
-    return DefWindowProc(hwnd,
-                         uMsg,
-                         wParam,
-                         lParam);
+    return DefWindowProcW(hwnd,
+                          uMsg,
+                          wParam,
+                          lParam);
 }
 
 TextBox::TextBox(void) {}
@@ -110,17 +110,17 @@ TextBox::TextBox(const UINT width,
         WindowsHelper::ErrorMessage("Failed to register main window's text box's class.");
     }
 
-    hwnd = CreateWindow((LPWSTR)MAKEINTATOM(registered),
-                        NULL,
-                        (WS_CHILD | WS_VISIBLE),
-                        0,
-                        0,
-                        width,
-                        height,
-                        parent,
-                        NULL,
-                        NULL,
-                        NULL);
+    hwnd = CreateWindowW((LPWSTR)MAKEINTATOM(registered),
+                         NULL,
+                         (WS_CHILD | WS_VISIBLE),
+                         0,
+                         0,
+                         width,
+                         height,
+                         parent,
+                         NULL,
+                         NULL,
+                         NULL);
     if (!hwnd) {
         WindowsHelper::ErrorMessage("Failed to create main window's text box.");
     }
