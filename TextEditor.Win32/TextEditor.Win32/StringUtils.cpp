@@ -22,6 +22,29 @@ std::wstring StringUtils::ToUTF16(const std::string &string) {
     return final;
 }
 
-std::wstring StringUtils::InPlace(const std::string &string) {
-    return std::wstring(string.begin(), string.end());
+std::string StringUtils::ToMB(const std::string &string) {
+    const std::wstring wstring{ std::wstring(string.begin(), string.end()) };
+    
+    int size{ WideCharToMultiByte(CP_UTF8,
+                                  WC_COMPOSITECHECK,
+                                  wstring.c_str(),
+                                  -1,
+                                  NULL,
+                                  0,
+                                  NULL,
+                                  NULL) };
+    LPSTR mbString{ new CHAR[size] };
+
+    WideCharToMultiByte(CP_UTF8,
+                        WC_COMPOSITECHECK,
+                        wstring.c_str(),
+                        -1,
+                        mbString,
+                        0,
+                        NULL,
+                        NULL);
+    std::string final{ mbString };
+    delete[] mbString;
+
+    return final;
 }
