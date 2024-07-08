@@ -1,7 +1,7 @@
 #include <WindowsHelper.hpp>
 
 ATOM WindowsHelper::Register(const WNDPROC callback, const LPCTSTR name) {
-	WNDCLASS wndclass{};
+	WNDCLASS wndclass = {};
 	wndclass.lpfnWndProc = callback;
 	wndclass.lpszClassName = name;
 

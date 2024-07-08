@@ -8,7 +8,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
     MainWindow mainWindow;
     mainWindow.Show();
 
-    MSG msg{};
+    MSG msg = {};
     while (GetMessage(&msg,
                       NULL,
                       0,

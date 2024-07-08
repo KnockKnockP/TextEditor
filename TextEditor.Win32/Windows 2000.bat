@@ -1,4 +1,4 @@
 @echo off
 
-make WINDOWS_VERSION="-D_WIN32_WINNT=0x0500"
+make WINDOWS_VERSION="0x0500"
 pause
