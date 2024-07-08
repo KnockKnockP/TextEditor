@@ -27,8 +27,8 @@
     <ClCompile Include="WindowsHelper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="StringUtilities.hpp">
-      <Filter>Header Files</Filter>
+    <ClCompile Include="StringUtils.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -39,6 +39,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="WindowsHelper.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="StringUtils.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

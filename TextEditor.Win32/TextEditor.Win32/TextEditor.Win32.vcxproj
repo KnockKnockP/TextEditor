@@ -78,12 +78,13 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainWindow.cpp" />
-    <ClCompile Include="StringUtilities.hpp" />
+    <ClCompile Include="StringUtils.cpp" />
     <ClCompile Include="TextBox.cpp" />
     <ClCompile Include="WindowsHelper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MainWindow.hpp" />
+    <ClInclude Include="StringUtils.hpp" />
     <ClInclude Include="TextBox.hpp" />
     <ClInclude Include="WindowsHelper.hpp" />
   </ItemGroup>

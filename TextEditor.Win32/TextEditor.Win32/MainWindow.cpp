@@ -1,6 +1,6 @@
 #include <MainWindow.hpp>
 #include <WindowsHelper.hpp>
-#include <StringUtilities.hpp>
+#include <StringUtils.hpp>
 
 HWND MainWindow::hwnd{ NULL };
 UINT MainWindow::width{ 0 }, MainWindow::height{ 0 };
@@ -15,8 +15,8 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd,
             textBox = TextBox(width,
                               height,
                               hwnd,
-                              TEXT("unifont-15.1.05.otf"),
-                              TEXT("Unifont"));
+                              "unifont-15.1.05.otf",
+                              "Unifont");
             return 0;
 
         case WM_SIZE:
@@ -32,14 +32,16 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd,
                          (SWP_NOREPOSITION | SWP_NOZORDER));
             return 0;
 
-        case WM_CLOSE:
-            if (MessageBox(hwnd,
-                TEXT("Are you sure you want to quit?"),
-                TEXT("정말로 종료하시겠습니까?"),
-                MB_OKCANCEL) == IDOK) {
+        case WM_CLOSE: {
+            const std::wstring title{ StringUtils::ToUTF16("정말로 종료하시겠습니까?") }, contents{ StringUtils::ToUTF16("Are you sure you want to quit?") };
+            if (MessageBoxW(hwnd,
+                            contents.c_str(),
+                            title.c_str(),
+                            MB_OKCANCEL) == IDOK) {
                 DestroyWindow(hwnd);
             }
             return 0;
+        }
 
         case WM_DESTROY:
             PostQuitMessage(0);
@@ -52,32 +54,28 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd,
                          lParam);
 }
 
+#include <fstream>
+
 MainWindow::MainWindow(void) {
-    const std::string utfClass = TT("Text Editor 안녕");
-    const ATOM registered = WindowsHelper::Register(Callback, "");
+    const ATOM registered{ WindowsHelper::Register(Callback, "Text Editor") };
     if (!registered) {
-        MessageBox(NULL,
-                   TEXT("Failed to register main window's class."),
-                   TEXT("Error"),
-                   (MB_OK | MB_ICONERROR));
+        WindowsHelper::ErrorMessage("Failed to register main window's class.");
     }
 
-    hwnd = CreateWindow(MAKEINTATOM(registered),
-                        TEXT("Text Editor / 문서 편집기"),
-                        WS_OVERLAPPEDWINDOW,
-                        CW_USEDEFAULT,
-                        CW_USEDEFAULT,
-                        CW_USEDEFAULT,
-                        CW_USEDEFAULT,
-                        NULL,
-                        NULL,
-                        NULL,
-                        NULL);
+    const std::wstring wstring{ StringUtils::ToUTF16("Text Editor / 문서 편집기") };
+    hwnd = CreateWindowW(MAKEINTATOM(registered),
+                         wstring.c_str(),
+                         WS_OVERLAPPEDWINDOW,
+                         CW_USEDEFAULT,
+                         CW_USEDEFAULT,
+                         CW_USEDEFAULT,
+                         CW_USEDEFAULT,
+                         NULL,
+                         NULL,
+                         NULL,
+                         NULL);
     if (!hwnd) {
-        MessageBox(NULL,
-                   TEXT("Failed to create main window."),
-                   TEXT("Error"),
-                   (MB_OK | MB_ICONERROR));
+        WindowsHelper::ErrorMessage("Failed to create main window.");
     }
 }
 
