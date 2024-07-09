@@ -2,14 +2,13 @@
 #include <StringUtils.hpp>
 #include <WindowsHelper.hpp>
 
-AtomWrapper::AtomWrapper(const std::string &name, WNDPROC callback) {
+AtomWrapper::AtomWrapper(const std::string &name, const WNDPROC callback) {
     this->name = name;
 
     WNDCLASS wndclass = {};
     wndclass.lpfnWndProc = callback;
 
-    //const std::wstring wstring{ StringUtils::ToUTF16(name) };
-    TStringContainer tName{ StringUtils::ToUTF16(name) };
+    const TStringContainer tName{ TStringContainer{ name } };
     wndclass.lpszClassName = tName.GetString();
 
     atom = RegisterClass(&wndclass);

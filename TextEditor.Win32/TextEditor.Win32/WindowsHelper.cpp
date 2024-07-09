@@ -2,11 +2,10 @@
 #include <StringUtils.hpp>
 
 void WindowsHelper::ErrorMessage(const std::string &contents) {
-    //const std::wstring wstring{ StringUtils::ToUTF16(contents) };
-    const TStringContainer tString{ StringUtils::ToUTF16(contents) };
-    
+    const TStringContainer tContents{ contents }, tTitle{ "Error" };
+
     MessageBox(NULL,
-               tString.GetString(),
-               TEXT("Error"),
+               tContents.GetString(),
+               tTitle.GetString(),
                (MB_OK | MB_ICONERROR));
 }

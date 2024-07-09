@@ -9,6 +9,6 @@ private:
     std::string name{};
 
 public:
-    AtomWrapper(const std::string &name, WNDPROC callback);
+    AtomWrapper(const std::string &name, const WNDPROC callback);
     const std::string &GetName(void) const;
 };

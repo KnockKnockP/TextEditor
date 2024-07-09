@@ -14,17 +14,14 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd,
     switch (uMsg) {
         case WM_CREATE: {
 #if _WIN32_WINNT > _WIN32_WINNT_NT4
-            //const std::wstring wFontFile{ StringUtils::ToUTF16(fontFile)};
-            TStringContainer tFontFile{ StringUtils::ToUTF16(fontFile) };
-
+            const TStringContainer tFontFile{ fontFile };
             if (!AddFontResourceEx(tFontFile.GetString(),
                                    FR_PRIVATE,
                                    NULL)) {
                 WindowsHelper::ErrorMessage("Failed to add main window's text box's font file.");
             }
 
-            //const std::wstring wFontName{ StringUtils::ToUTF16(fontName) };
-            TStringContainer tFontName{ StringUtils::ToUTF16(fontName) };
+            const TStringContainer tFontName{ fontName };
             font = CreateFont(0,
                               0,
                               0,
@@ -66,8 +63,7 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd,
                 WindowsHelper::ErrorMessage("Failed to fill main window's text box's rectangle.");
             }
 
-            //const std::wstring text{ StringUtils::ToUTF16("Test / 테스트 / テスト") };
-            TStringContainer tText{ StringUtils::ToUTF16("Test / 테스트 / テスト") };
+            const TStringContainer tText{ "Test / 테스트 / テスト" };
             if (!DrawText(hdc,
                           tText.GetString(),
                           -1,
@@ -84,8 +80,7 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd,
 #if _WIN32_WINNT > _WIN32_WINNT_NT4
             DeleteObject(font);
 
-            //const std::wstring wFontFile{ StringUtils::ToUTF16(fontFile) };
-            TStringContainer tFontFile{ StringUtils::ToUTF16(fontFile) };
+            const TStringContainer tFontFile{ fontFile };
             RemoveFontResourceEx(tFontFile.GetString(),
                                  FR_PRIVATE,
                                  0);
@@ -111,9 +106,8 @@ TextBox::TextBox(const UINT width,
     this->fontName = fontName;
 
     const AtomWrapper textBoxClass("TextBox", Callback);
-    //const std::wstring wTextBoxClass{ StringUtils::ToUTF16(textBoxClass.GetName()) };
-    TStringContainer tTextBoxClass{ StringUtils::ToUTF16(textBoxClass.GetName()) };
-    hwnd = CreateWindow(tTextBoxClass.GetString(),
+    const TStringContainer tTextBoxClassName{ textBoxClass.GetName() };
+    hwnd = CreateWindow(tTextBoxClassName.GetString(),
                         NULL,
                         (WS_CHILD | WS_VISIBLE),
                         0,

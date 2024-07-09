@@ -33,14 +33,17 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd,
                          (SWP_NOREPOSITION | SWP_NOZORDER));
             return 0;
 
-        case WM_CLOSE:
+        case WM_CLOSE: {
+            const TStringContainer tText{ "정말로 종료하시겠습니까?" }, tCaption{ "Are you sure you want to quit?" };
+
             if (MessageBox(hwnd,
-                           TEXT("정말로 종료하시겠습니까?"),
-                           TEXT("Are you sure you want to quit?"),
+                           tText.GetString(),
+                           tCaption.GetString(),
                            MB_OKCANCEL) == IDOK) {
                 DestroyWindow(hwnd);
             }
             return 0;
+        }
 
         case WM_DESTROY:
             PostQuitMessage(0);
@@ -54,14 +57,12 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd,
 }
 
 MainWindow::MainWindow(void) {
-    WindowsHelper::ErrorMessage("Test 테스트");
+    WindowsHelper::ErrorMessage("Unicode 유니코드 Юникод");
 
     const AtomWrapper mainWindowClass("Text Editor", Callback);
-    //const std::wstring wMainWindowClassName{ StringUtils::ToUTF16(mainWindowClass.GetName()) };
-    TStringContainer tMainWindowClassName{ StringUtils::ToUTF16(mainWindowClass.GetName()) };
-
+    const TStringContainer tMainWindowClassName{ mainWindowClass.GetName() }, tWindowTitle{ "Text Editor / 문서 편집기" };
     hwnd = CreateWindow(tMainWindowClassName.GetString(),
-                        TEXT("Text Editor / 문서 편집기"),
+                        tWindowTitle.GetString(),
                         WS_OVERLAPPEDWINDOW,
                         CW_USEDEFAULT,
                         CW_USEDEFAULT,
