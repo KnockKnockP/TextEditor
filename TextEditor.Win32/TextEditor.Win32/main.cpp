@@ -9,12 +9,12 @@ int APIENTRY WinMain(const HINSTANCE hInstance,
     mainWindow.Show();
 
     MSG msg = {};
-    while (GetMessageW(&msg,
-                       NULL,
-                       0,
-                       0) > 0) {
+    while (GetMessage(&msg,
+                      NULL,
+                      0,
+                      0) > 0) {
         TranslateMessage(&msg);
-        DispatchMessageW(&msg);
+        DispatchMessage(&msg);
     }
     return 0;
 }

@@ -1,6 +1,7 @@
 #include <TextBox.hpp>
 #include <WindowsHelper.hpp>
 #include <StringUtils.hpp>
+#include <AtomWrapper.hpp>
 
 HWND TextBox::hwnd{ NULL };
 std::string TextBox::fontFile{ "" }, TextBox::fontName{""};
@@ -13,29 +14,31 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd,
     switch (uMsg) {
         case WM_CREATE: {
 #if _WIN32_WINNT > _WIN32_WINNT_NT4
-            const std::wstring wFontFile{ StringUtils::ToUTF16(fontFile)};
+            //const std::wstring wFontFile{ StringUtils::ToUTF16(fontFile)};
+            TStringContainer tFontFile{ StringUtils::ToUTF16(fontFile) };
 
-            if (!AddFontResourceExW(wFontFile.c_str(),
-                                    FR_PRIVATE,
-                                    NULL)) {
+            if (!AddFontResourceEx(tFontFile.GetString(),
+                                   FR_PRIVATE,
+                                   NULL)) {
                 WindowsHelper::ErrorMessage("Failed to add main window's text box's font file.");
             }
 
-            const std::wstring wFontName{ StringUtils::ToUTF16(fontName) };
-            font = CreateFontW(0,
-                               0,
-                               0,
-                               0,
-                               0,
-                               FALSE,
-                               FALSE,
-                               FALSE,
-                               DEFAULT_CHARSET,
-                               OUT_DEFAULT_PRECIS,
-                               CLIP_DEFAULT_PRECIS,
-                               ANTIALIASED_QUALITY,
-                               FF_DONTCARE,
-                               wFontName.c_str());
+            //const std::wstring wFontName{ StringUtils::ToUTF16(fontName) };
+            TStringContainer tFontName{ StringUtils::ToUTF16(fontName) };
+            font = CreateFont(0,
+                              0,
+                              0,
+                              0,
+                              0,
+                              FALSE,
+                              FALSE,
+                              FALSE,
+                              DEFAULT_CHARSET,
+                              OUT_DEFAULT_PRECIS,
+                              CLIP_DEFAULT_PRECIS,
+                              ANTIALIASED_QUALITY,
+                              FF_DONTCARE,
+                              tFontName.GetString());
             if (!font) {
                 WindowsHelper::ErrorMessage("Failed to create main window's text box's font.");
             }
@@ -63,12 +66,13 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd,
                 WindowsHelper::ErrorMessage("Failed to fill main window's text box's rectangle.");
             }
 
-            const std::wstring text{ StringUtils::ToUTF16("Test / 테스트 / テスト") };
-            if (!DrawTextW(hdc,
-                           text.c_str(),
-                           -1,
-                           &paintStruct.rcPaint,
-                           DT_CENTER)) {
+            //const std::wstring text{ StringUtils::ToUTF16("Test / 테스트 / テスト") };
+            TStringContainer tText{ StringUtils::ToUTF16("Test / 테스트 / テスト") };
+            if (!DrawText(hdc,
+                          tText.GetString(),
+                          -1,
+                          &paintStruct.rcPaint,
+                          DT_CENTER)) {
                 WindowsHelper::ErrorMessage("Failed to fill main window's text box's text.");
             }
 
@@ -80,19 +84,20 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd,
 #if _WIN32_WINNT > _WIN32_WINNT_NT4
             DeleteObject(font);
 
-            const std::wstring wFontFile{ StringUtils::ToUTF16(fontFile) };
-            RemoveFontResourceExW(wFontFile.c_str(),
-                                  FR_PRIVATE,
-                                  0);
+            //const std::wstring wFontFile{ StringUtils::ToUTF16(fontFile) };
+            TStringContainer tFontFile{ StringUtils::ToUTF16(fontFile) };
+            RemoveFontResourceEx(tFontFile.GetString(),
+                                 FR_PRIVATE,
+                                 0);
 #endif
             return 0;
         }
     }
 
-    return DefWindowProcW(hwnd,
-                          uMsg,
-                          wParam,
-                          lParam);
+    return DefWindowProc(hwnd,
+                         uMsg,
+                         wParam,
+                         lParam);
 }
 
 TextBox::TextBox(void) {}
@@ -105,22 +110,20 @@ TextBox::TextBox(const UINT width,
     this->fontFile = fontFile;
     this->fontName = fontName;
 
-    ATOM registered{ WindowsHelper::Register(Callback, "TextBox") };
-    if (!registered) {
-        WindowsHelper::ErrorMessage("Failed to register main window's text box's class.");
-    }
-
-    hwnd = CreateWindowW((LPWSTR)MAKEINTATOM(registered),
-                         NULL,
-                         (WS_CHILD | WS_VISIBLE),
-                         0,
-                         0,
-                         width,
-                         height,
-                         parent,
-                         NULL,
-                         NULL,
-                         NULL);
+    const AtomWrapper textBoxClass("TextBox", Callback);
+    //const std::wstring wTextBoxClass{ StringUtils::ToUTF16(textBoxClass.GetName()) };
+    TStringContainer tTextBoxClass{ StringUtils::ToUTF16(textBoxClass.GetName()) };
+    hwnd = CreateWindow(tTextBoxClass.GetString(),
+                        NULL,
+                        (WS_CHILD | WS_VISIBLE),
+                        0,
+                        0,
+                        width,
+                        height,
+                        parent,
+                        NULL,
+                        NULL,
+                        NULL);
     if (!hwnd) {
         WindowsHelper::ErrorMessage("Failed to create main window's text box.");
     }

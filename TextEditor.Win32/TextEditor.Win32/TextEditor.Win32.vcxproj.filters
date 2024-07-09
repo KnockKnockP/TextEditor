@@ -30,6 +30,12 @@
     <ClCompile Include="StringUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="AtomWrapper.hpp">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AtomWrapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MainWindow.hpp">
