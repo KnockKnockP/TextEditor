@@ -44,9 +44,8 @@ TStringContainer::TStringContainer(const std::string &utf8) {
                         NULL,
                         NULL);
 
-    const size_t size { (_mbslen((unsigned char *)(ansi)) + 1) };
-    string = new CHAR[size];
-    _mbscpy((unsigned char *)(string), (unsigned char *)(ansi));
+    string = new CHAR[ansiSize];
+    memcpy(string, ansi, ansiSize);
 
     delete[] ansi;
 #endif
