@@ -8,7 +8,8 @@ TStringContainer::TStringContainer(const LPWSTR wString) {
 #if UNICODE
     size_t size{ (wcslen(wString) + 1) };
     string = new TCHAR[size];
-    wcscpy_s(string, size, wString);
+
+    wcscpy(string, wString);
 #endif
 }
 
