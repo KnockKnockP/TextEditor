@@ -1,9 +1,11 @@
 #include <StringUtils.hpp>
+#include <WindowsVersions.hpp>
 
 TStringContainer::TStringContainer(const int size) {
     string = new TCHAR[size];
 }
 
+#if _WIN32_WINNT <= _WIN32_WINNT_NT35
 //Calude ahh generated function.
 static void ToUCS2(const std::string &utf8,
                    LPWSTR ucs2,
@@ -54,20 +56,30 @@ static void ToUCS2(const std::string &utf8,
 
     ucs2[ucs2Index] = L'\0';
 }
+#endif
 
 TStringContainer::TStringContainer(const std::string &utf8) {
-    size_t ucs2Size = ((utf8.length() * 2) + 1);
-    LPWSTR ucs2{ new WCHAR[ucs2Size] };
-    ToUCS2(utf8, ucs2, ucs2Size);
+    size_t wideSize = ((utf8.length() * 2) + 1);
+    LPWSTR wide{ new WCHAR[wideSize] };
+#if _WIN32_WINNT <= _WIN32_WINNT_NT35
+    ToUCS2(utf8, wide, wideSize);
+#else
+    MultiByteToWideChar(CP_UTF8,
+                        0,
+                        utf8.c_str(),
+                        -1,
+                        wide,
+                        wideSize);
+#endif
 
 #ifdef UNICODE
-    const size_t size{ (wcslen(ucs2) + 1) };
+    const size_t size{ (wcslen(wide) + 1) };
     string = new TCHAR[size];
-    wcscpy(string, ucs2);
+    wcscpy(string, wide);
 #else
     int ansiSize{ WideCharToMultiByte(CP_ACP,
                                       0,
-                                      ucs2,
+                                      wide,
                                       -1,
                                       NULL,
                                       0,
@@ -77,7 +89,7 @@ TStringContainer::TStringContainer(const std::string &utf8) {
     LPSTR ansi{ new CHAR[ansiSize] };
     WideCharToMultiByte(CP_ACP,
                         0,
-                        ucs2,
+                        wide,
                         -1,
                         ansi,
                         ansiSize,
@@ -90,7 +102,7 @@ TStringContainer::TStringContainer(const std::string &utf8) {
     delete[] ansi;
 #endif
 
-    delete[] ucs2;
+    delete[] wide;
 }
 
 LPTSTR TStringContainer::GetString(void) const {

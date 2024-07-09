@@ -89,6 +89,7 @@
     <ClInclude Include="StringUtils.hpp" />
     <ClInclude Include="TextBox.hpp" />
     <ClInclude Include="WindowsHelper.hpp" />
+    <ClInclude Include="WindowsVersions.hpp" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="Resources\unifont-15.1.05.otf">
