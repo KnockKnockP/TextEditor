@@ -1,17 +1,29 @@
 #Shamelessly ChatGPT ahh makefile.
 
+CXX = g++
+
+ifdef OLD_TOOLS
+	CXX = ./Tools/i686-8.1.0-release-win32-dwarf-rt_v6-rev0/bin/g++.exe
+endif
+
 UNICODE = -DUNICODE
+UNICODE_BUILD_PATH = UNICODE
+WINDOWS_VERSION = 0x0500
+ARCH=native
+BIT=64
+
 ifdef NO_UNICODE
-	UNICODE = -DNO_UNICODE
+	UNICODE =
+	UNICODE_BUILD_PATH = ANSI
 endif
 
 SOURCE_DIR = ./TextEditor.Win32
 INCLUDE_DIR = $(SOURCE_DIR)
 RESOURCES_DIR = $(SOURCE_DIR)/Resources
-BUILD_DIR = ./bin/$(WINDOWS_VERSION)
+BIN_DIR = ./bin
+BUILD_DIR = $(BIN_DIR)/$(WINDOWS_VERSION)/$(UNICODE_BUILD_PATH)
 
-CXX = g++
-CXXFLAGS = -Wall -Wextra -pedantic -O3 -std=c++14 $(UNICODE) -D_WIN32_WINNT=$(WINDOWS_VERSION)
+CXXFLAGS = -Wall -Wextra -pedantic -O3 -std=c++14 $(UNICODE) -DWINDOWS_VERSION=$(WINDOWS_VERSION) -march=$(ARCH) -mtune=$(ARCH) -m$(BIT)
 LINKS = -lgdi32 -static
 
 TARGET = $(BUILD_DIR)/TextEditor.exe
@@ -32,4 +44,4 @@ RESOURCES:
 	cp $(RESOURCES_DIR)/* $(BUILD_DIR)
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BIN_DIR)

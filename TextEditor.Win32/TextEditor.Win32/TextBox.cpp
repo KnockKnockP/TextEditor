@@ -2,6 +2,7 @@
 #include <WindowsHelper.hpp>
 #include <StringUtils.hpp>
 #include <AtomWrapper.hpp>
+#include <WindowsVersions.hpp>
 
 HWND TextBox::hwnd{ NULL };
 std::string TextBox::fontFile{ "" }, TextBox::fontName{""};
@@ -13,7 +14,7 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd,
                                    const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE: {
-#if _WIN32_WINNT > _WIN32_WINNT_NT4
+#if WINDOWS_VERSION > _WIN32_WINNT_NT4
             const TStringContainer tFontFile{ fontFile };
             if (!AddFontResourceEx(tFontFile.GetString(),
                                    FR_PRIVATE,
@@ -51,7 +52,7 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd,
                 return 0;
             }
 
-#if _WIN32_WINNT > _WIN32_WINNT_NT4
+#if WINDOWS_VERSION > _WIN32_WINNT_NT4
             if (!SelectObject(hdc, font)) {
                 WindowsHelper::ErrorMessage("Failed to select main window's text box's font.");
             }
@@ -77,7 +78,7 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd,
         }
 
         case WM_DESTROY: {
-#if _WIN32_WINNT > _WIN32_WINNT_NT4
+#if WINDOWS_VERSION > _WIN32_WINNT_NT4
             DeleteObject(font);
 
             const TStringContainer tFontFile{ fontFile };

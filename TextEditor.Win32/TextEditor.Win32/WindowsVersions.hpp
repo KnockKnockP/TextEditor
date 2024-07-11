@@ -1,6 +1,9 @@
 #pragma once
 
-//I don't know the consequences of this but for some reason anything below NT 4.0 isn't defined.
+#ifndef WINDOWS_VERSION
+#define WINDOWS_VERSION _WIN32_WINNT
+#endif
+
 #ifndef _WIN32_WINNT_NT35
 #define _WIN32_WINNT_NT35 0x0350
 #endif

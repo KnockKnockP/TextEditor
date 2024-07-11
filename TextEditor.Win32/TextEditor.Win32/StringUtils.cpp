@@ -5,7 +5,7 @@ TStringContainer::TStringContainer(const int size) {
     string = new TCHAR[size];
 }
 
-#if _WIN32_WINNT <= _WIN32_WINNT_NT35
+#if WINDOWS_VERSION <= _WIN32_WINNT_NT35
 //Calude ahh generated function.
 static void ToUCS2(const std::string &utf8,
                    LPWSTR ucs2,
@@ -61,7 +61,7 @@ static void ToUCS2(const std::string &utf8,
 TStringContainer::TStringContainer(const std::string &utf8) {
     size_t wideSize = ((utf8.length() * 2) + 1);
     LPWSTR wide{ new WCHAR[wideSize] };
-#if _WIN32_WINNT <= _WIN32_WINNT_NT35
+#if WINDOWS_VERSION <= _WIN32_WINNT_NT35
     ToUCS2(utf8, wide, wideSize);
 #else
     MultiByteToWideChar(CP_UTF8,
