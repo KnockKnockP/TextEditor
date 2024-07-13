@@ -1,1 +1,0 @@
-mingw32-make WINDOWS_VERSION="0x0350" BIT="32"

@@ -11,4 +11,5 @@ static IResult Zip()
 
 webApplication.MapGet("/", () => Zip());
 webApplication.MapGet("/\r", () => Zip());
+
 webApplication.Run("http://192.168.219.101");
