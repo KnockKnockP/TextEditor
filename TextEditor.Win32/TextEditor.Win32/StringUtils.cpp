@@ -7,8 +7,7 @@ std::string StringUtils::UnicodeToUTF8(const WPARAM codePrint) {
 
     if (codePrint <= 0x7F) {
         utf8.push_back(static_cast<char>(codePrint));
-    }
-    else if (codePrint <= 0x7FF) {
+    } else if (codePrint <= 0x7FF) {
         utf8.push_back(static_cast<char>(0xC0 | (codePrint >> 6)));
         utf8.push_back(static_cast<char>(0x80 | (codePrint & 0x3F)));
     } else if (codePrint <= 0xFFFF) {
@@ -133,49 +132,6 @@ TStringContainer::TStringContainer(const std::string &utf8) {
 #endif
 
     delete[] wide;
-}
-
-void TStringContainer::operator+=(const TCHAR character) {
-    if (size == 0) {
-        //This should never happen but just in case.
-        size = 1;
-    }
-
-    LPTSTR newString = new TCHAR[size + 1];
-    if (newString == nullptr) {
-        WindowsHelper::ErrorMessage("Failed to allocate string.");
-        return;
-    }
-
-#if UNICODE
-    wcscpy(newString, string);
-#else
-    memcpy(newString, string, size * sizeof(TCHAR));
-#endif
-
-    newString[size - 1] = character;
-    newString[size++] = TEXT('\0');
-
-    delete[] string;
-    string = newString;
-}
-
-void TStringContainer::RemoveLastCharacter(void) {
-    if (size <= 1) {
-        return;
-    }
-
-    LPTSTR newString = new TCHAR[size - 1];
-    if (newString == nullptr) {
-        WindowsHelper::ErrorMessage("Failed to allocate string.");
-        return;
-    }
-
-    memcpy(newString, string, sizeof(TCHAR) * (size - 1));
-    newString[--size - 1] = TEXT('\0');
-
-    delete[] string;
-    string = newString;
 }
 
 LPTSTR TStringContainer::GetString(void) const {

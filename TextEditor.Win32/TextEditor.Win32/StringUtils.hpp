@@ -16,10 +16,7 @@ public:
     TStringContainer(const int size);
     TStringContainer(const std::string &utf8);
 
-    void operator+=(const TCHAR character);
-
     LPTSTR GetString(void) const;
-    void RemoveLastCharacter(void);
 
     ~TStringContainer(void);
 };
