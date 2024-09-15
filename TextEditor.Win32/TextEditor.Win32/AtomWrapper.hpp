@@ -10,5 +10,6 @@ private:
 
 public:
     AtomWrapper(const std::string &name, const WNDPROC callback);
+
     const std::string &GetName(void) const;
 };

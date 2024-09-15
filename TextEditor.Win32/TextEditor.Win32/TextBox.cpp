@@ -1,17 +1,14 @@
 #include <TextBox.hpp>
-#include <WindowsHelper.hpp>
-#include <StringUtils.hpp>
 #include <AtomWrapper.hpp>
+#include <WindowsHelper.hpp>
 #include <WindowsVersions.hpp>
 
 HWND TextBox::hwnd{ NULL };
 std::string TextBox::fontFile{ "" }, TextBox::fontName{""};
 HFONT TextBox::font{ NULL };
+std::string TextBox::text{ "" };
 
-LRESULT CALLBACK TextBox::Callback(const HWND hwnd,
-                                   const UINT uMsg,
-                                   const WPARAM wParam,
-                                   const LPARAM lParam) {
+LRESULT CALLBACK TextBox::Callback(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE: {
 #if WINDOWS_VERSION > _WIN32_WINNT_NT4
@@ -58,19 +55,23 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd,
             }
 #endif
 
-            if (!FillRect(hdc,
-                          &paintStruct.rcPaint,
-                          (HBRUSH)CreateSolidBrush(RGB(255, 255, 255)))) {
-                WindowsHelper::ErrorMessage("Failed to fill main window's text box's rectangle.");
+            HBRUSH brush{ CreateSolidBrush(RGB(rand() % 255, rand() % 255, rand() % 255)) };
+            if (!brush) {
+                WindowsHelper::ErrorMessage("Failed to create background brush.");
+                return 0;
             }
 
-            const TStringContainer tText{ "Test / 테스트 / テスト" };
-            if (!DrawText(hdc,
-                          tText.GetString(),
-                          -1,
-                          &paintStruct.rcPaint,
-                          DT_CENTER)) {
+            if (!FillRect(hdc, &paintStruct.rcPaint, brush)) {
+                WindowsHelper::ErrorMessage("Failed to fill main window's text box's rectangle.");
+                return 0;
+            }
+
+            DeleteObject(brush);
+
+            const TStringContainer tText{ text };
+            if (!DrawText(hdc, tText.GetString(), -1, &paintStruct.rcPaint, DT_CENTER)) {
                 WindowsHelper::ErrorMessage("Failed to fill main window's text box's text.");
+                return 0;
             }
 
             EndPaint(hwnd, &paintStruct);
@@ -82,27 +83,18 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd,
             DeleteObject(font);
 
             const TStringContainer tFontFile{ fontFile };
-            RemoveFontResourceEx(tFontFile.GetString(),
-                                 FR_PRIVATE,
-                                 0);
+            RemoveFontResourceEx(tFontFile.GetString(), FR_PRIVATE, 0);
 #endif
             return 0;
         }
     }
 
-    return DefWindowProc(hwnd,
-                         uMsg,
-                         wParam,
-                         lParam);
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
 TextBox::TextBox(void) {}
 
-TextBox::TextBox(const UINT width,
-                 const UINT height,
-                 const HWND parent,
-                 const std::string &fontFile,
-                 const std::string &fontName) {
+TextBox::TextBox(const UINT width, const UINT height, const HWND parent, const std::string &fontFile, const std::string &fontName) {
     this->fontFile = fontFile;
     this->fontName = fontName;
 
@@ -126,4 +118,16 @@ TextBox::TextBox(const UINT width,
 
 HWND TextBox::GetHwnd(void) const {
     return hwnd;
+}
+
+void TextBox::Keystroke(const WPARAM wParam) const {
+    if (wParam == VK_BACK) {
+        if (text.size() > 0) {
+            text.pop_back();
+        }
+    } else {
+        text += StringUtils::UnicodeToUTF8(wParam);
+    }
+
+    InvalidateRect(hwnd, 0, TRUE);
 }

@@ -1,18 +1,18 @@
 #include <Windows.h>
 #include <MainWindow.hpp>
 
-int APIENTRY WinMain(const HINSTANCE hInstance,
-                     const HINSTANCE hPrevInstance,
-                     const LPSTR lpCmdLine,
-                     const int nShowCmd) {
+int APIENTRY
+#if UNICODE
+wWinMain
+#else
+WinMain
+#endif
+(const HINSTANCE hInstance, const HINSTANCE hPrevInstance, const LPTSTR lpCmdLine, const int nShowCmd) {
     const MainWindow mainWindow;
     mainWindow.Show();
 
     MSG msg = {};
-    while (GetMessage(&msg,
-                      NULL,
-                      0,
-                      0) > 0) {
+    while (GetMessage(&msg, NULL, 0, 0) > 0) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
