@@ -30,9 +30,6 @@
     <ClCompile Include="StringUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AtomWrapper.hpp">
-      <Filter>Header Files</Filter>
-    </ClCompile>
     <ClCompile Include="AtomWrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -53,9 +50,12 @@
     <ClInclude Include="WindowsVersions.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AtomWrapper.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="Resources\unifont-15.1.05.otf">
+    <CopyFileToFolders Include="Resources\0x0500\unifont-15.1.05.otf">
       <Filter>Resource Files</Filter>
     </CopyFileToFolders>
   </ItemGroup>

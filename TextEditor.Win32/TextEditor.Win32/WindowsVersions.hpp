@@ -1,3 +1,5 @@
+#ifndef WINDOWSVERSIONS_HPP
+#define WINDOWSVERSIONS_HPP
 #pragma once
 
 #ifndef WINDOWS_VERSION
@@ -6,4 +8,5 @@
 
 #ifndef _WIN32_WINNT_NT35
 #define _WIN32_WINNT_NT35 0x0350
+#endif
 #endif

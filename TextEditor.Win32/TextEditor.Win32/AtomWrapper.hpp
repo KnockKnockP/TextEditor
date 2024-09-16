@@ -1,15 +1,18 @@
+#ifndef ATOMWRAPPER_HPP
+#define ATOMWRAPPER_HPP
 #pragma once
 
-#include <string>
 #include <Windows.h>
+#include <StringUtils.hpp>
 
 class AtomWrapper {
 private:
     ATOM atom{ 0 };
-    std::string name{};
+    UnifiedString name{};
 
 public:
-    AtomWrapper(const std::string &name, const WNDPROC callback);
+    AtomWrapper(UnifiedString name, const WNDPROC callback);
 
-    const std::string &GetName(void) const;
+    UnifiedString GetName(void) const;
 };
+#endif

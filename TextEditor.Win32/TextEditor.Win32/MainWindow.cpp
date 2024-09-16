@@ -3,14 +3,16 @@
 #include <AtomWrapper.hpp>
 #include <WindowsHelper.hpp>
 
-HWND MainWindow::hwnd{ NULL };
+HWND MainWindow::hwnd{ nullptr };
 UINT MainWindow::width{ 0 }, MainWindow::height{ 0 };
 TextBox MainWindow::textBox;
+
+std::vector<char> params;
 
 LRESULT CALLBACK MainWindow::Callback(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE:
-            textBox = TextBox(width, height, hwnd, "unifont-15.1.05.otf", "Unifont");
+            textBox = TextBox(width, height, hwnd, UT("unifont-15.1.05.otf"), UT("Unifont"));
             return 0;
 
         case WM_CHAR:
@@ -21,13 +23,14 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd, const UINT uMsg, const WP
             width = LOWORD(lParam);
             height = HIWORD(lParam);
 
-            SetWindowPos(textBox.GetHwnd(), NULL, 0, 0, width, height, (SWP_NOREPOSITION | SWP_NOZORDER));
+            SetWindowPos(textBox.GetHwnd(), nullptr, 0, 0, width, height, (SWP_NOREPOSITION | SWP_NOZORDER));
             return 0;
 
         case WM_CLOSE: {
-            const TStringContainer tText{ "정말로 종료하시겠습니까?" }, tCaption{ "Are you sure you want to quit?" };
-
-            if (MessageBox(hwnd, tText.GetString(), tCaption.GetString(), MB_OKCANCEL | MB_ICONQUESTION) == IDOK) {
+            if (MessageBox(hwnd,
+                           UnifiedString{ UT("정말로 종료하시겠습니까?") }.GetWindowsString(),
+                           UnifiedString{ UT("Are you sure you want to quit?") }.GetWindowsString(),
+                           MB_OKCANCEL | MB_ICONQUESTION) == IDOK) {
                 DestroyWindow(hwnd);
             }
             return 0;
@@ -42,21 +45,20 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd, const UINT uMsg, const WP
 }
 
 MainWindow::MainWindow(void) {
-    const AtomWrapper mainWindowClass("Text Editor", Callback);
-    const TStringContainer tMainWindowClassName{ mainWindowClass.GetName() }, tWindowTitle{ "Text Editor / 문서 편집기" };
-    hwnd = CreateWindow(tMainWindowClassName.GetString(),
-                        tWindowTitle.GetString(),
+    const AtomWrapper mainWindowClass(UT("Text Editor"), Callback);
+    hwnd = CreateWindow(mainWindowClass.GetName().GetWindowsString(),
+                        UnifiedString{ UT("Text Editor / 문서 편집기") }.GetWindowsString(),
                         WS_OVERLAPPEDWINDOW,
                         CW_USEDEFAULT,
                         CW_USEDEFAULT,
                         CW_USEDEFAULT,
                         CW_USEDEFAULT,
-                        NULL,
-                        NULL,
-                        NULL,
-                        NULL);
+                        nullptr,
+                        nullptr,
+                        nullptr,
+                        nullptr);
     if (!hwnd) {
-        WindowsHelper::ErrorMessage("Failed to create main window.");
+        WindowsHelper::ErrorMessage(UT("Failed to create main window."));
     }
 }
 

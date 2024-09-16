@@ -39,7 +39,7 @@ $(TARGET): $(SRCS) | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LINKS) -I$(INCLUDE_DIR)
 
 RESOURCES:
-	cp $(RESOURCES_DIR)/* $(BUILD_DIR)
+	cp $(RESOURCES_DIR)/$(WINDOWS_VERSION)/* $(BUILD_DIR)
 
 clean:
 	rm -rf $(BIN_DIR)

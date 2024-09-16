@@ -76,12 +76,12 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -104,7 +104,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AtomWrapper.cpp" />
-    <ClCompile Include="AtomWrapper.hpp" />
+    <ClInclude Include="AtomWrapper.hpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainWindow.cpp" />
     <ClCompile Include="StringUtils.cpp" />
@@ -119,7 +119,7 @@
     <ClInclude Include="WindowsVersions.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="Resources\unifont-15.1.05.otf">
+    <CopyFileToFolders Include="Resources\0x0500\unifont-15.1.05.otf">
       <FileType>Document</FileType>
     </CopyFileToFolders>
   </ItemGroup>

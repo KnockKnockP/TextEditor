@@ -1,9 +1,12 @@
+#ifndef WINDOWSHELPER_HPP
+#define WINDOWSHELPER_HPP
 #pragma once
 
-#include <string>
 #include <Windows.h>
+#include <StringUtils.hpp>
 
 class WindowsHelper {
 public:
-    static void ErrorMessage(const std::string &contents);
+    static void ErrorMessage(UnifiedString contents);
 };
+#endif

@@ -1,22 +1,19 @@
 #include <AtomWrapper.hpp>
-#include <StringUtils.hpp>
 #include <WindowsHelper.hpp>
 
-AtomWrapper::AtomWrapper(const std::string &name, const WNDPROC callback) {
+AtomWrapper::AtomWrapper(UnifiedString name, const WNDPROC callback) {
     this->name = name;
 
-    WNDCLASS wndclass = {};
+    WNDCLASS wndclass{};
     wndclass.lpfnWndProc = callback;
-
-    const TStringContainer tName{ TStringContainer{ name } };
-    wndclass.lpszClassName = tName.GetString();
+    wndclass.lpszClassName = name.GetWindowsString();
 
     atom = RegisterClass(&wndclass);
     if (!atom) {
-        WindowsHelper::ErrorMessage("Failed to register class " + name + '.');
+        WindowsHelper::ErrorMessage(UT("Failed to register class ") + name + UT('.'));
     }
 }
 
-const std::string &AtomWrapper::GetName(void) const {
+UnifiedString AtomWrapper::GetName(void) const {
     return name;
 }

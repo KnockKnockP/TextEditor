@@ -1,3 +1,5 @@
+#ifndef MAINWINDOW_HPP
+#define MAINWINDOW_HPP
 #pragma once
 
 #include <Windows.h>
@@ -16,3 +18,4 @@ public:
 
     void Show(void) const;
 };
+#endif

@@ -11,8 +11,8 @@ WinMain
     const MainWindow mainWindow;
     mainWindow.Show();
 
-    MSG msg = {};
-    while (GetMessage(&msg, NULL, 0, 0) > 0) {
+    MSG msg{};
+    while (GetMessage(&msg, nullptr, 0, 0) > 0) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
