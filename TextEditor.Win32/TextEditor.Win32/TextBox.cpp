@@ -4,12 +4,15 @@
 #include <WindowsVersions.hpp>
 
 HWND TextBox::hwnd{ nullptr };
-UnifiedString TextBox::fontFile{}, TextBox::fontName{}, TextBox::text{};
+StringUtilities::UTF8String TextBox::fontFile{}, TextBox::fontName{}, TextBox::text{};
 #ifndef UNICODE
 CHAR TextBox::multibyteBuffer[3] = { 0, 0, 0 };
 #endif
 HFONT TextBox::font{ nullptr };
+size_t TextBox::fontHeight{ 16 }, TextBox::wrappedLineCount{ 0 };
+WORD TextBox::width{ 0 }, TextBox::height{ 0 };
 
+/*
 LRESULT CALLBACK TextBox::Callback(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE: {
@@ -18,7 +21,7 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd, const UINT uMsg, const WPARA
                 WindowsHelper::ErrorMessage(UT("Failed to add main window's text box's font file."));
             }
 
-            font = CreateFont(0,
+            font = CreateFont(fontHeight,
                               0,
                               0,
                               0,
@@ -37,12 +40,17 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd, const UINT uMsg, const WPARA
             }
 #endif
 
-            if (!CreateCaret(hwnd, nullptr, 5, 20)) {
+            if (!CreateCaret(hwnd, nullptr, 2, fontHeight)) {
                 WindowsHelper::ErrorMessage(UT("Failed to create main window's text box's caret."));
             }
             ShowCaret(hwnd);
             return 0;
         }
+
+        case WM_SIZE:
+            width = LOWORD(lParam);
+            height = HIWORD(lParam);
+            break;
 
         case WM_PAINT: {
             PAINTSTRUCT paintStruct{};
@@ -74,8 +82,13 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd, const UINT uMsg, const WPARA
             const LPTSTR string{ text.GetWindowsString() };
             RECT textSize{};
             DrawText(hdc, string, -1, &textSize, DT_CALCRECT | DT_EXPANDTABS);
-            const int lineCount{ 0 }; //TODO: implement this.
-            SetCaretPos(textSize.right, textSize.bottom * lineCount);
+
+            if (textSize.right > width || textSize.bottom > height) {
+                ++wrappedLineCount;
+                text += '\n';
+            }
+
+            SetCaretPos(textSize.right, textSize.bottom * wrappedLineCount);
 
             if (!DrawText(hdc, text.GetWindowsString(), -1, &paintStruct.rcPaint, DT_EXPANDTABS)) {
                 WindowsHelper::ErrorMessage(UT("Failed to fill main window's text box's text."));
@@ -151,3 +164,38 @@ void TextBox::Keystroke(const WPARAM wParam) const {
 
     InvalidateRect(hwnd, nullptr, true);
 }
+*/
+
+LRESULT CALLBACK TextBox::Callback(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
+    switch (uMsg) {}
+
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+TextBox::TextBox(void) {}
+
+TextBox::TextBox(const UINT width, const UINT height, const HWND parent, StringUtilities::UTF8String fontFile, StringUtilities::UTF8String fontName) {
+    this->fontFile = fontFile;
+    this->fontName = fontName;
+
+    hwnd = CreateWindow(TEXT("EDIT"),
+                        nullptr,
+                        WS_BORDER | WS_CHILD | WS_HSCROLL | WS_TABSTOP | WS_VISIBLE | WS_VSCROLL,
+                        0,
+                        0,
+                        width,
+                        height,
+                        parent,
+                        nullptr,
+                        nullptr,
+                        nullptr);
+    if (!hwnd) {
+        WindowsHelper::ErrorMessage(TEXT("Failed to create main window's text box."));
+    }
+}
+
+HWND TextBox::GetHwnd(void) const {
+    return hwnd;
+}
+
+void TextBox::Keystroke(const WPARAM wParam) const {}

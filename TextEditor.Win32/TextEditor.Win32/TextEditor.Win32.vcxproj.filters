@@ -27,7 +27,7 @@
     <ClCompile Include="WindowsHelper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="StringUtils.cpp">
+    <ClCompile Include="StringUtilities.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AtomWrapper.cpp">
@@ -44,7 +44,7 @@
     <ClInclude Include="WindowsHelper.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="StringUtils.hpp">
+    <ClInclude Include="StringUtilities.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="WindowsVersions.hpp">

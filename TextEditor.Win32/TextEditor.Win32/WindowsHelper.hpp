@@ -3,10 +3,10 @@
 #pragma once
 
 #include <Windows.h>
-#include <StringUtils.hpp>
+#include <StringUtilities.hpp>
 
 class WindowsHelper {
 public:
-    static void ErrorMessage(UnifiedString contents);
+    static void ErrorMessage(StringUtilities::UTF8String contents);
 };
 #endif

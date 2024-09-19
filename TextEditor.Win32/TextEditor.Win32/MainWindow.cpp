@@ -1,10 +1,10 @@
 #include <MainWindow.hpp>
-#include <StringUtils.hpp>
 #include <AtomWrapper.hpp>
 #include <WindowsHelper.hpp>
+#include <StringUtilities.hpp>
 
 HWND MainWindow::hwnd{ nullptr };
-UINT MainWindow::width{ 0 }, MainWindow::height{ 0 };
+WORD MainWindow::width{ 0 }, MainWindow::height{ 0 };
 TextBox MainWindow::textBox;
 
 std::vector<char> params;
@@ -12,7 +12,7 @@ std::vector<char> params;
 LRESULT CALLBACK MainWindow::Callback(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE:
-            textBox = TextBox(width, height, hwnd, UT("unifont-15.1.05.otf"), UT("Unifont"));
+            textBox = TextBox(width, height, hwnd, TEXT("unifont-15.1.05.otf"), TEXT("Unifont"));
             return 0;
 
         case WM_CHAR:
@@ -28,8 +28,8 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd, const UINT uMsg, const WP
 
         case WM_CLOSE: {
             if (MessageBox(hwnd,
-                           UnifiedString{ UT("정말로 종료하시겠습니까?") }.GetWindowsString(),
-                           UnifiedString{ UT("Are you sure you want to quit?") }.GetWindowsString(),
+                           StringUtilities::UTF8String{ TEXT("정말로 종료하시겠습니까?") }.GetWindowsTString().get(),
+                           StringUtilities::UTF8String{ TEXT("Are you sure you want to quit?") }.GetWindowsTString().get(),
                            MB_OKCANCEL | MB_ICONQUESTION) == IDOK) {
                 DestroyWindow(hwnd);
             }
@@ -45,9 +45,9 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd, const UINT uMsg, const WP
 }
 
 MainWindow::MainWindow(void) {
-    const AtomWrapper mainWindowClass(UT("Text Editor"), Callback);
-    hwnd = CreateWindow(mainWindowClass.GetName().GetWindowsString(),
-                        UnifiedString{ UT("Text Editor / 문서 편집기") }.GetWindowsString(),
+    const AtomWrapper mainWindowClass(TEXT("Text Editor"), Callback);
+    hwnd = CreateWindow(mainWindowClass.GetName().GetWindowsTString().get(),
+                        StringUtilities::UTF8String{ TEXT("Text Editor / 문서 편집기") }.GetWindowsTString().get(),
                         WS_OVERLAPPEDWINDOW,
                         CW_USEDEFAULT,
                         CW_USEDEFAULT,
@@ -58,7 +58,7 @@ MainWindow::MainWindow(void) {
                         nullptr,
                         nullptr);
     if (!hwnd) {
-        WindowsHelper::ErrorMessage(UT("Failed to create main window."));
+        WindowsHelper::ErrorMessage(TEXT("Failed to create main window."));
     }
 }
 

@@ -3,16 +3,16 @@
 #pragma once
 
 #include <Windows.h>
-#include <StringUtils.hpp>
+#include <StringUtilities.hpp>
 
 class AtomWrapper {
 private:
     ATOM atom{ 0 };
-    UnifiedString name{};
+    StringUtilities::UTF8String name{};
 
 public:
-    AtomWrapper(UnifiedString name, const WNDPROC callback);
+    AtomWrapper(StringUtilities::UTF8String name, const WNDPROC callback);
 
-    UnifiedString GetName(void) const;
+    StringUtilities::UTF8String GetName(void) const;
 };
 #endif
