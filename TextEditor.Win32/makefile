@@ -21,8 +21,9 @@ RESOURCES_DIR = $(SOURCE_DIR)/Resources
 BIN_DIR = ./bin
 BUILD_DIR = $(BIN_DIR)/$(ARCH)/$(WINDOWS_VERSION)/$(UNICODE_BUILD_PATH)/$(BIT)
 
-CXXFLAGS = -Wall -Wextra -pedantic -O3 -std=c++14 $(UNICODE) -DWINDOWS_VERSION=$(WINDOWS_VERSION) -march=$(ARCH) -mtune=$(ARCH) -m$(BIT) -mwindows
-LINKS = -lgdi32 -latomic -static
+CXXFLAGS = -Wall -Wextra -pedantic -O3 -Ofast -std=c++14 $(UNICODE) -DWINDOWS_VERSION=$(WINDOWS_VERSION) -march=$(ARCH) -mtune=$(ARCH) -m$(BIT) -mwindows
+#LINKS = -lgdi32 -static
+LINKS = -static
 
 TARGET = $(BUILD_DIR)/TextEditor.exe
 SRCS = $(wildcard $(SOURCE_DIR)/*.cpp)

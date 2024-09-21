@@ -7,7 +7,7 @@ AtomWrapper::AtomWrapper(StringUtilities::UTF8String name, const WNDPROC callbac
     WNDCLASS wndclass{};
     wndclass.lpfnWndProc = callback;
 
-    std::shared_ptr<const TCHAR[]> string{ name.GetWindowsTString() };
+    const std::unique_ptr<const TCHAR[]> string{ name.GetWindowsTString() };
     wndclass.lpszClassName = string.get();
 
     atom = RegisterClass(&wndclass);
