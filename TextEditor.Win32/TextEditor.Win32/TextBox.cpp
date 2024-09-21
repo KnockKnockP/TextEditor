@@ -190,7 +190,7 @@ TextBox::TextBox(const UINT width, const UINT height, const HWND parent, StringU
                         nullptr,
                         nullptr);
     if (!hwnd) {
-        WindowsHelper::ErrorMessage(TEXT("Failed to create main window's text box."));
+        WindowsHelper::ErrorMessage(ST("Failed to create main window's text box."));
     }
 }
 

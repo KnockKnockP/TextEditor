@@ -317,7 +317,7 @@ namespace StringUtilities {
 
     inline std::unique_ptr<const WCHAR[]> ANSIToUTF16(const CHAR *const pANSIString) {
         const int UTF16Characters{ MultiByteToWideChar(CP_ACP, 0, pANSIString, -1, nullptr, 0)};
-        std::unique_ptr<WCHAR[]> pUTF16String{ std::make_unique<WCHAR[]>(UTF16Characters) };
+        std::unique_ptr<WCHAR[]> pUTF16String{std::make_unique<WCHAR[]>(UTF16Characters)};
 
         if (!MultiByteToWideChar(CP_ACP, 0, pANSIString, -1, pUTF16String.get(), UTF16Characters)) {
             STRINGUTILITIES_UTF8STRING_THROW();
@@ -327,7 +327,7 @@ namespace StringUtilities {
 
     inline std::unique_ptr<const CHAR[]> UTF16ToANSI(const WCHAR *const pUTF16String) {
         const int ANSICharacters{ WideCharToMultiByte(CP_ACP, 0, pUTF16String, -1, nullptr, 0, nullptr, nullptr)};
-        std::unique_ptr<CHAR[]> pANSIString{ std::make_unique<CHAR[]>(ANSICharacters) };
+        std::unique_ptr<CHAR[]> pANSIString{std::make_unique<CHAR[]>(ANSICharacters)};
 
         if (!WideCharToMultiByte(CP_ACP, 0, pUTF16String, -1, pANSIString.get(), ANSICharacters, nullptr, nullptr)) {
             STRINGUTILITIES_UTF8STRING_THROW();
@@ -336,10 +336,10 @@ namespace StringUtilities {
     }
 
     inline std::unique_ptr<const byte[]> UTF16ToUTF8(const WCHAR *const pUTF16String) {
-        const int UTF8Characters{ WideCharToMultiByte(CP_UTF8, 0, pUTF16String, -1, nullptr, 0, nullptr, nullptr)};
-        std::unique_ptr<byte[]> pUTF8String{ std::make_unique<byte[]>(UTF8Characters) };
+        const int UTF8Size{ WideCharToMultiByte(CP_UTF8, 0, pUTF16String, -1, nullptr, 0, nullptr, nullptr)};
+        std::unique_ptr<byte[]> pUTF8String{std::make_unique<byte[]>(UTF8Size)};
 
-        if (!WideCharToMultiByte(CP_UTF8, 0, pUTF16String, - 1, reinterpret_cast<CHAR *>(pUTF8String.get()), UTF8Characters, nullptr, nullptr)) {
+        if (!WideCharToMultiByte(CP_UTF8, 0, pUTF16String, - 1, reinterpret_cast<CHAR *>(pUTF8String.get()), UTF8Size, nullptr, nullptr)) {
             STRINGUTILITIES_UTF8STRING_THROW();
         }
         return pUTF8String;
@@ -347,7 +347,7 @@ namespace StringUtilities {
 
     inline std::unique_ptr<const WCHAR[]> UTF8ToUTF16(const CHAR *const pUTF8String) {
         const int UTF16Characters{ MultiByteToWideChar(CP_UTF8, 0, pUTF8String, -1, nullptr, 0)};
-        std::unique_ptr<WCHAR[]> pUTF16String{ std::make_unique<WCHAR[]>(UTF16Characters) };
+        std::unique_ptr<WCHAR[]> pUTF16String{std::make_unique<WCHAR[]>(UTF16Characters)};
 
         if (!MultiByteToWideChar(CP_UTF8, 0, pUTF8String, -1, pUTF16String.get(), UTF16Characters)) {
             STRINGUTILITIES_UTF8STRING_THROW();

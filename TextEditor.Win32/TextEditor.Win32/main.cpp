@@ -8,9 +8,6 @@ wWinMain
 WinMain
 #endif
 (const HINSTANCE hInstance, const HINSTANCE hPrevInstance, const LPTSTR lpCmdLine, const int nShowCmd) {
-    const StringUtilities::UTF8String a{ TEXT("안녕") };
-    MessageBox(NULL, a.GetWindowsTString().get(), TEXT("Hello"), MB_OK);
-
     const MainWindow mainWindow;
     mainWindow.Show();
 

@@ -12,7 +12,7 @@ std::vector<char> params;
 LRESULT CALLBACK MainWindow::Callback(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE:
-            textBox = TextBox(width, height, hwnd, TEXT("unifont-15.1.05.otf"), TEXT("Unifont"));
+            textBox = TextBox(width, height, hwnd, ST("unifont-15.1.05.otf"), ST("Unifont"));
             return 0;
 
         case WM_CHAR:
@@ -28,8 +28,8 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd, const UINT uMsg, const WP
 
         case WM_CLOSE: {
             if (MessageBox(hwnd,
-                           StringUtilities::UTF8String{ TEXT("정말로 종료하시겠습니까?") }.GetWindowsTString().get(),
-                           StringUtilities::UTF8String{ TEXT("Are you sure you want to quit?") }.GetWindowsTString().get(),
+                           StringUtilities::UTF8String{ ST("정말로 종료하시겠습니까?") }.GetWindowsTString().get(),
+                           StringUtilities::UTF8String{ ST("Are you sure you want to quit?") }.GetWindowsTString().get(),
                            MB_OKCANCEL | MB_ICONQUESTION) == IDOK) {
                 DestroyWindow(hwnd);
             }
@@ -45,9 +45,9 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd, const UINT uMsg, const WP
 }
 
 MainWindow::MainWindow(void) {
-    const AtomWrapper mainWindowClass(TEXT("Text Editor"), Callback);
+    const AtomWrapper mainWindowClass(ST("Text Editor"), Callback);
     hwnd = CreateWindow(mainWindowClass.GetName().GetWindowsTString().get(),
-                        StringUtilities::UTF8String{ TEXT("Text Editor / 문서 편집기") }.GetWindowsTString().get(),
+                        StringUtilities::UTF8String{ ST("Text Editor / 문서 편집기") }.GetWindowsTString().get(),
                         WS_OVERLAPPEDWINDOW,
                         CW_USEDEFAULT,
                         CW_USEDEFAULT,
@@ -58,7 +58,7 @@ MainWindow::MainWindow(void) {
                         nullptr,
                         nullptr);
     if (!hwnd) {
-        WindowsHelper::ErrorMessage(TEXT("Failed to create main window."));
+        WindowsHelper::ErrorMessage(ST("Failed to create main window."));
     }
 }
 

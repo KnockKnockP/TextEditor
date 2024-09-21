@@ -12,7 +12,7 @@ AtomWrapper::AtomWrapper(StringUtilities::UTF8String name, const WNDPROC callbac
 
     atom = RegisterClass(&wndclass);
     if (!atom) {
-        WindowsHelper::ErrorMessage(TEXT("Failed to register class ") + name + TEXT('.'));
+        WindowsHelper::ErrorMessage(ST("Failed to register class ") + name + ST('.'));
     }
 }
 

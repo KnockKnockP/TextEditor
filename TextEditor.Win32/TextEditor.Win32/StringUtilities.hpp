@@ -7,6 +7,10 @@
 #include <memory>
 #include <Windows.h>
 
+#ifndef ST
+#define ST(TEXT) L##TEXT
+#endif
+
 #ifndef STRINGUTILITIES_UTF8STRING_THROW
 //#define STRINGUTILITIES_UTF8STRING_THROW() throw std::runtime_error{ "GetLastError: " + std::to_string(GetLastError()) }
 #define STRINGUTILITIES_UTF8STRING_THROW()
@@ -80,9 +84,9 @@ namespace StringUtilities {
     const UTF8String operator+(const LPCSTR pANSIString, const UTF8String &string);
     const UTF8String operator+(const LPCWSTR pUTF16String, const UTF8String &string);
 
-    inline std::unique_ptr<const WCHAR[]> ANSIToUTF16(const CHAR *const pANSIString);
-    inline std::unique_ptr<const CHAR[]> UTF16ToANSI(const WCHAR *const pUTF16String);
-    inline std::unique_ptr<const byte[]> UTF16ToUTF8(const WCHAR *const pUTF16String);
-    inline std::unique_ptr<const WCHAR[]> UTF8ToUTF16(const CHAR *const pUTF8String);
+    inline std::unique_ptr<const WCHAR[]> ANSIToUTF16(const CHAR* const pANSIString);
+    inline std::unique_ptr<const CHAR[]> UTF16ToANSI(const WCHAR* const pUTF16String);
+    inline std::unique_ptr<const byte[]> UTF16ToUTF8(const WCHAR* const pUTF16String);
+    inline std::unique_ptr<const WCHAR[]> UTF8ToUTF16(const CHAR* const pUTF8String);
 }
 #endif
