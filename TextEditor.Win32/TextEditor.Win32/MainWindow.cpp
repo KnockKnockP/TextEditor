@@ -16,7 +16,7 @@ LRESULT CALLBACK MainWindow::Callback(const HWND hwnd, const UINT uMsg, const WP
             return 0;
 
         case WM_CHAR:
-            textBox.Keystroke(wParam);
+            SendMessage(textBox.GetHwnd(), uMsg, wParam, lParam);
             break;
 
         case WM_SIZE:

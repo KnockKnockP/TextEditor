@@ -1,3 +1,4 @@
+#include <vector>
 #include <TextBox.hpp>
 #include <AtomWrapper.hpp>
 #include <WindowsHelper.hpp>
@@ -9,20 +10,19 @@ StringUtilities::UTF8String TextBox::fontFile{}, TextBox::fontName{}, TextBox::t
 CHAR TextBox::multibyteBuffer[3] = { 0, 0, 0 };
 #endif
 HFONT TextBox::font{ nullptr };
-size_t TextBox::fontHeight{ 16 }, TextBox::wrappedLineCount{ 0 };
+size_t TextBox::fontWidth{ 16 }, TextBox::fontHeight{ 16 }, TextBox::wrappedLineCount{ 0 };
 WORD TextBox::width{ 0 }, TextBox::height{ 0 };
 
-/*
 LRESULT CALLBACK TextBox::Callback(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE: {
 #if WINDOWS_VERSION > _WIN32_WINNT_NT4
-            if (!AddFontResourceEx(fontFile.GetWindowsString(), FR_PRIVATE, nullptr)) {
-                WindowsHelper::ErrorMessage(UT("Failed to add main window's text box's font file."));
+            if (!AddFontResourceEx(fontFile.GetWindowsTString().get(), FR_PRIVATE, nullptr)) {
+                WindowsHelper::ErrorMessage(ST("Failed to add main window's text box's font file."));
             }
 
             font = CreateFont(fontHeight,
-                              0,
+                              fontWidth,
                               0,
                               0,
                               0,
@@ -34,14 +34,14 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd, const UINT uMsg, const WPARA
                               CLIP_DEFAULT_PRECIS,
                               ANTIALIASED_QUALITY,
                               FF_DONTCARE,
-                              fontName.GetWindowsString());
+                              fontName.GetWindowsTString().get());
             if (!font) {
-                WindowsHelper::ErrorMessage(UT("Failed to create main window's text box's font."));
+                WindowsHelper::ErrorMessage(ST("Failed to create main window's text box's font."));
             }
 #endif
 
             if (!CreateCaret(hwnd, nullptr, 2, fontHeight)) {
-                WindowsHelper::ErrorMessage(UT("Failed to create main window's text box's caret."));
+                WindowsHelper::ErrorMessage(ST("Failed to create main window's text box's caret."));
             }
             ShowCaret(hwnd);
             return 0;
@@ -52,46 +52,87 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd, const UINT uMsg, const WPARA
             height = HIWORD(lParam);
             break;
 
+        case WM_CHAR:
+            if (wParam == VK_BACK) {
+                text.RemoveLastCharacter();
+            } else {
+#ifndef UNICODE
+                if (IsDBCSLeadByte(wParam)) {
+                    if (!multibyteBuffer[0]) {
+                        multibyteBuffer[0] = wParam;
+                    } else {
+                        multibyteBuffer[1] = wParam;
+                        text += multibyteBuffer;
+
+                        memset(multibyteBuffer, 0, sizeof(CHAR) * 3);
+                    }
+                } else {
+#endif
+                    WPARAM converted{ wParam };
+                    if (converted == '\r') {
+                        converted = '\n';
+                    }
+                    text += converted;
+#ifndef UNICODE
+                }
+#endif
+            }
+
+            InvalidateRect(hwnd, nullptr, true);
+            return 0;
+
         case WM_PAINT: {
             PAINTSTRUCT paintStruct{};
             HDC hdc = BeginPaint(hwnd, &paintStruct);
             if (!hdc) {
-                WindowsHelper::ErrorMessage(UT("Failed to fetch main window's text box's paint data."));
+                WindowsHelper::ErrorMessage(ST("Failed to fetch main window's text box's paint data."));
                 return 0;
             }
 
 #if WINDOWS_VERSION > _WIN32_WINNT_NT4
             if (!SelectObject(hdc, font)) {
-                WindowsHelper::ErrorMessage(UT("Failed to select main window's text box's font."));
+                WindowsHelper::ErrorMessage(ST("Failed to select main window's text box's font."));
             }
 #endif
 
             HBRUSH brush{ CreateSolidBrush(RGB(rand() % 255, rand() % 255, rand() % 255)) };
             if (!brush) {
-                WindowsHelper::ErrorMessage(UT("Failed to create background brush."));
+                WindowsHelper::ErrorMessage(ST("Failed to create background brush."));
                 return 0;
             }
 
             if (!FillRect(hdc, &paintStruct.rcPaint, brush)) {
-                WindowsHelper::ErrorMessage(UT("Failed to fill main window's text box's rectangle."));
+                WindowsHelper::ErrorMessage(ST("Failed to fill main window's text box's rectangle."));
                 return 0;
             }
 
             DeleteObject(brush);
 
-            const LPTSTR string{ text.GetWindowsString() };
-            RECT textSize{};
-            DrawText(hdc, string, -1, &textSize, DT_CALCRECT | DT_EXPANDTABS);
+            const std::unique_ptr<const WCHAR[]> string{ text.GetUTF16String() };
 
-            if (textSize.right > width || textSize.bottom > height) {
-                ++wrappedLineCount;
-                text += '\n';
+            size_t i{ 0 }, newLines{ 0 }, startOfLastLine{ 0 };
+            while (string[i]) {
+                if (string[i++] == L'\n') {
+                    ++newLines;
+                    startOfLastLine = i;
+                }
             }
 
-            SetCaretPos(textSize.right, textSize.bottom * wrappedLineCount);
+            i = startOfLastLine;
+            std::vector<WCHAR> charactersInLastLine{};
+            while (string[i]) {
+                charactersInLastLine.push_back(string[i++]);
+            }
+            charactersInLastLine.push_back(0);
+            const StringUtilities::UTF8String lastLine{ charactersInLastLine.data() };
 
-            if (!DrawText(hdc, text.GetWindowsString(), -1, &paintStruct.rcPaint, DT_EXPANDTABS)) {
-                WindowsHelper::ErrorMessage(UT("Failed to fill main window's text box's text."));
+            RECT textSize{};
+            DrawText(hdc, lastLine.GetWindowsTString().get(), -1, &textSize, DT_CALCRECT | DT_EXPANDTABS);
+
+            SetCaretPos(textSize.right, newLines * fontHeight);
+
+            if (!DrawText(hdc, text.GetWindowsTString().get(), -1, &paintStruct.rcPaint, DT_EXPANDTABS)) {
+                WindowsHelper::ErrorMessage(ST("Failed to fill main window's text box's text."));
                 return 0;
             }
 
@@ -102,7 +143,7 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd, const UINT uMsg, const WPARA
         case WM_DESTROY: {
 #if WINDOWS_VERSION > _WIN32_WINNT_NT4
             DeleteObject(font);
-            RemoveFontResourceEx(fontFile.GetWindowsString(), FR_PRIVATE, 0);
+            RemoveFontResourceEx(fontFile.GetWindowsTString().get(), FR_PRIVATE, 0);
 #endif
             HideCaret(hwnd);
             DestroyCaret();
@@ -115,12 +156,12 @@ LRESULT CALLBACK TextBox::Callback(const HWND hwnd, const UINT uMsg, const WPARA
 
 TextBox::TextBox(void) {}
 
-TextBox::TextBox(const UINT width, const UINT height, const HWND parent, UnifiedString fontFile, UnifiedString fontName) {
+TextBox::TextBox(const UINT width, const UINT height, const HWND parent, StringUtilities::UTF8String fontFile, StringUtilities::UTF8String fontName) {
     this->fontFile = fontFile;
     this->fontName = fontName;
 
-    const AtomWrapper textBoxClass(UT("TextBox"), Callback);
-    hwnd = CreateWindow(textBoxClass.GetName().GetWindowsString(),
+    const AtomWrapper textBoxClass(ST("TextBox"), Callback);
+    hwnd = CreateWindow(textBoxClass.GetName().GetWindowsTString().get(),
                         nullptr,
                         WS_CHILD | WS_VISIBLE,
                         0,
@@ -132,7 +173,7 @@ TextBox::TextBox(const UINT width, const UINT height, const HWND parent, Unified
                         nullptr,
                         nullptr);
     if (!hwnd) {
-        WindowsHelper::ErrorMessage(UT("Failed to create main window's text box."));
+        WindowsHelper::ErrorMessage(ST("Failed to create main window's text box."));
     }
 }
 
@@ -164,38 +205,3 @@ void TextBox::Keystroke(const WPARAM wParam) const {
 
     InvalidateRect(hwnd, nullptr, true);
 }
-*/
-
-LRESULT CALLBACK TextBox::Callback(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
-    switch (uMsg) {}
-
-    return DefWindowProc(hwnd, uMsg, wParam, lParam);
-}
-
-TextBox::TextBox(void) {}
-
-TextBox::TextBox(const UINT width, const UINT height, const HWND parent, StringUtilities::UTF8String fontFile, StringUtilities::UTF8String fontName) {
-    this->fontFile = fontFile;
-    this->fontName = fontName;
-
-    hwnd = CreateWindow(TEXT("EDIT"),
-                        nullptr,
-                        WS_BORDER | WS_CHILD | WS_HSCROLL | WS_TABSTOP | WS_VISIBLE | WS_VSCROLL,
-                        0,
-                        0,
-                        width,
-                        height,
-                        parent,
-                        nullptr,
-                        nullptr,
-                        nullptr);
-    if (!hwnd) {
-        WindowsHelper::ErrorMessage(ST("Failed to create main window's text box."));
-    }
-}
-
-HWND TextBox::GetHwnd(void) const {
-    return hwnd;
-}
-
-void TextBox::Keystroke(const WPARAM wParam) const {}

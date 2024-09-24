@@ -13,7 +13,7 @@ private:
     static CHAR multibyteBuffer[3];
 #endif
     static HFONT font;
-    static size_t fontHeight, wrappedLineCount;
+    static size_t fontWidth, fontHeight, wrappedLineCount;
     static WORD width, height;
 
     static LRESULT CALLBACK Callback(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam);
