@@ -1,0 +1,7 @@
+#ifndef WINDOWS_VERSIONS_H
+#define WINDOWS_VERSIONS_H
+
+#ifndef WINDOWS_VERSION
+#define WINDOWS_VERSION _WIN32_WINNT
+#endif
+#endif

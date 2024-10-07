@@ -105,20 +105,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AtomWrapper.cpp" />
-    <ClInclude Include="AtomWrapper.hpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="MainWindow.cpp" />
-    <ClCompile Include="StringUtilities.cpp" />
-    <ClCompile Include="TextBox.cpp" />
-    <ClCompile Include="WindowsHelper.cpp" />
+    <ClCompile Include="atom_wrapper.c" />
+    <ClInclude Include="atom_wrapper.h" />
+    <ClCompile Include="main.c" />
+    <ClCompile Include="main_window.c" />
+    <ClCompile Include="memory_helper.c" />
+    <ClCompile Include="string_utilities.c" />
+    <ClCompile Include="textbox.c" />
+    <ClCompile Include="windows_helper.c" />
+    <ClInclude Include="windows_versions.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MainWindow.hpp" />
-    <ClInclude Include="StringUtilities.hpp" />
-    <ClInclude Include="TextBox.hpp" />
-    <ClInclude Include="WindowsHelper.hpp" />
-    <ClInclude Include="WindowsVersions.hpp" />
+    <ClInclude Include="main_window.h" />
+    <ClInclude Include="memory_helper.h" />
+    <ClInclude Include="string_utilities.h" />
+    <ClInclude Include="textbox.h" />
+    <ClInclude Include="windows_helper.h" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="Resources\0x0500\unifont-15.1.05.otf">

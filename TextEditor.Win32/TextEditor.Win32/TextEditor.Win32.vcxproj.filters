@@ -15,42 +15,48 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MainWindow.cpp">
+    <ClCompile Include="main_window.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TextBox.cpp">
+    <ClCompile Include="textbox.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="WindowsHelper.cpp">
+    <ClCompile Include="windows_helper.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="StringUtilities.cpp">
+    <ClCompile Include="string_utilities.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AtomWrapper.cpp">
+    <ClCompile Include="atom_wrapper.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="memory_helper.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MainWindow.hpp">
+    <ClInclude Include="main_window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="TextBox.hpp">
+    <ClInclude Include="textbox.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="WindowsHelper.hpp">
+    <ClInclude Include="windows_helper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="StringUtilities.hpp">
+    <ClInclude Include="string_utilities.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="WindowsVersions.hpp">
+    <ClInclude Include="atom_wrapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AtomWrapper.hpp">
+    <ClInclude Include="memory_helper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows_versions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
