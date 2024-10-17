@@ -1,5 +1,12 @@
+#if _DEBUG
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+#endif
+
 #include <Windows.h>
 #include <main_window.h>
+#include <windows_helper.h>
 
 #ifdef CRT_MAIN
 int WinMainCRTStartup(void)
@@ -13,6 +20,10 @@ WinMain
 (const HINSTANCE hInstance, const HINSTANCE hPrevInstance, const LPTSTR lpCmdLine, const int nShowCmd)
 #endif
 {
+#if _DEBUG
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
     MAIN_WINDOW_initialize();
     MAIN_WINDOW_show();
 

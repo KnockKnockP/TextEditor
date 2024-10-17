@@ -2,33 +2,33 @@
 #include <atom_wrapper.h>
 #include <memory_helper.h>
 #include <windows_helper.h>
-#include <windows_versions.h>
 
 static TEXTBOX textbox = { 0 };
 
 LRESULT CALLBACK TEXTBOX_callback(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE: {
-#if WINDOWS_VERSION > _WIN32_WINNT_NT4
-            if (!AddFontResourceEx(WIDE_STRING_get_T_string(textbox.pFont_file), FR_PRIVATE, NULL)) {
-                WINDOWS_HELPER_error(TEXT("Failed to add main window's text box's font file."));
-            }
+            if (AddFontResourceEx_saved) {
+                textbox.pFont_file_t = WIDE_STRING_get_T_string(textbox.pFont_file);
+                if (!AddFontResourceEx_saved(textbox.pFont_file_t, FR_PRIVATE, NULL)) {
+                    WINDOWS_HELPER_error(TEXT("Failed to add main window's text box's font file."));
+                }
 
-            textbox.font = CreateFont(textbox.font_height, textbox.font_width,
-                                      0,
-                                      0,
-                                      0,
-                                      FALSE, FALSE, FALSE,
-                                      DEFAULT_CHARSET,
-                                      OUT_DEFAULT_PRECIS,
-                                      CLIP_DEFAULT_PRECIS,
-                                      ANTIALIASED_QUALITY,
-                                      FF_DONTCARE,
-                                      WIDE_STRING_get_T_string(textbox.pFont_file));
-            if (!textbox.font) {
-                WINDOWS_HELPER_error(TEXT("Failed to create main window's text box's font."));
+                textbox.font = CreateFont(textbox.font_height, textbox.font_width,
+                                          0,
+                                          0,
+                                          0,
+                                          FALSE, FALSE, FALSE,
+                                          DEFAULT_CHARSET,
+                                          OUT_DEFAULT_PRECIS,
+                                          CLIP_DEFAULT_PRECIS,
+                                          ANTIALIASED_QUALITY,
+                                          FF_DONTCARE,
+                                          textbox.pFont_file_t);
+                if (!textbox.font) {
+                    WINDOWS_HELPER_error(TEXT("Failed to create main window's text box's font."));
+                }
             }
-#endif
 
             if (!CreateCaret(hwnd, NULL, 2, textbox.font_height)) {
                 WINDOWS_HELPER_error(TEXT("Failed to create main window's text box's caret."));
@@ -58,7 +58,7 @@ LRESULT CALLBACK TEXTBOX_callback(const HWND hwnd, const UINT uMsg, const WPARAM
                     }
                 } else {
 #endif
-                    WCHAR converted = wParam;
+                    WCHAR converted = (WCHAR)wParam;
                     if (converted == L'\r') {
                         converted = L'\n';
                     }
@@ -79,11 +79,11 @@ LRESULT CALLBACK TEXTBOX_callback(const HWND hwnd, const UINT uMsg, const WPARAM
                 return 0;
             }
 
-#if WINDOWS_VERSION > _WIN32_WINNT_NT4
-            if (!SelectObject(hdc, textbox.font)) {
-                WINDOWS_HELPER_error(TEXT("Failed to select main window's text box's font."));
+            if (AddFontResourceEx_saved) {
+                if (!SelectObject(hdc, textbox.font)) {
+                    WINDOWS_HELPER_error(TEXT("Failed to select main window's text box's font."));
+                }
             }
-#endif
 
             HBRUSH brush = CreateSolidBrush(RGB(rand() % 255, rand() % 255, rand() % 255));
             if (!brush) {
@@ -115,25 +115,31 @@ LRESULT CALLBACK TEXTBOX_callback(const HWND hwnd, const UINT uMsg, const WPARAM
             }
 
             RECT text_size = { 0 };
-            DrawText(hdc, WIDE_STRING_get_T_string(&last_line), -1, &text_size, DT_CALCRECT | DT_EXPANDTABS);
+            LPCTSTR pLast_line = WIDE_STRING_get_T_string(&last_line);
+            DrawText(hdc, pLast_line, -1, &text_size, DT_CALCRECT | DT_EXPANDTABS);
             WIDE_STRING_destroy(&last_line);
+            MEMORY_HELPER_free((void **)&pLast_line);
 
             SetCaretPos(text_size.right, new_lines * textbox.font_height);
 
-            if (!DrawText(hdc, WIDE_STRING_get_T_string(&textbox.text), -1, &paint_struct.rcPaint, DT_EXPANDTABS)) {
+            LPCTSTR pText = WIDE_STRING_get_T_string(&textbox.text);
+            if (!DrawText(hdc, pText, -1, &paint_struct.rcPaint, DT_EXPANDTABS)) {
                 WINDOWS_HELPER_error(TEXT("Failed to fill main window's text box's text."));
                 return 0;
             }
+            MEMORY_HELPER_free((void **)&pText);
 
             EndPaint(hwnd, &paint_struct);
             return 0;
         }
 
         case WM_DESTROY:
-#if WINDOWS_VERSION > _WIN32_WINNT_NT4
-            DeleteObject(textbox.font);
-            RemoveFontResourceEx(WIDE_STRING_get_T_string(textbox.pFont_file), FR_PRIVATE, 0);
-#endif
+            if (RemoveFontResourceEx_saved) {
+                DeleteObject(textbox.font);
+                RemoveFontResourceEx_saved(textbox.pFont_file_t, FR_PRIVATE, 0);
+                MEMORY_HELPER_free((void **)&textbox.pFont_file_t);
+            }
+
             HideCaret(hwnd);
             DestroyCaret();
             return 0;
@@ -142,7 +148,10 @@ LRESULT CALLBACK TEXTBOX_callback(const HWND hwnd, const UINT uMsg, const WPARAM
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-void TEXTBOX_initialize(const UINT width, const UINT height, const HWND parent, WIDE_STRING *pFont_file, WIDE_STRING *pFont_name) {
+void TEXTBOX_initialize(const WORD width, const WORD height, const HWND parent, WIDE_STRING *pFont_file, WIDE_STRING *pFont_name) {
+    WINDOWS_HELPER_get_AddFontResourceEx();
+    WINDOWS_HELPER_get_RemoveFontResourceEx();
+
     textbox.pFont_file = pFont_file;
     textbox.pFont_name = pFont_name;
     textbox.text = WIDE_STRING_create_empty();
@@ -159,7 +168,8 @@ void TEXTBOX_initialize(const UINT width, const UINT height, const HWND parent, 
     WIDE_STRING textbox_class_name = WIDE_STRING_create_w(L"Text Box");
     ATOM_WRAPPER_initialize(&textbox_class, &textbox_class_name, TEXTBOX_callback);
 
-    textbox.hwnd = CreateWindow(WIDE_STRING_get_T_string(&textbox_class_name),
+    LPCTSTR pClass_name = WIDE_STRING_get_T_string(&textbox_class_name);
+    textbox.hwnd = CreateWindow(pClass_name,
                                 NULL,
                                 WS_CHILD | WS_VISIBLE,
                                 0, 0,
@@ -170,6 +180,7 @@ void TEXTBOX_initialize(const UINT width, const UINT height, const HWND parent, 
     }
 
     WIDE_STRING_destroy(&textbox_class_name);
+    MEMORY_HELPER_free((void **)&pClass_name);
 }
 
 const TEXTBOX *TEXTBOX_get(void) {

@@ -1,4 +1,5 @@
 #include <atom_wrapper.h>
+#include <memory_helper.h>
 #include <windows_helper.h>
 
 void ATOM_WRAPPER_initialize(ATOM_WRAPPER *pAtom_wrapper, WIDE_STRING *pName, const WNDPROC callback) {
@@ -16,4 +17,6 @@ void ATOM_WRAPPER_initialize(ATOM_WRAPPER *pAtom_wrapper, WIDE_STRING *pName, co
 
         WIDE_STRING_destroy(&message);
     }
+
+    MEMORY_HELPER_free((void **)& wndClass.lpszClassName);
 }
