@@ -112,7 +112,9 @@
     <ClCompile Include="memory_helper.c" />
     <ClCompile Include="string_utilities.c" />
     <ClCompile Include="textbox.c" />
+    <ClCompile Include="vector.c" />
     <ClCompile Include="windows_helper.c" />
+    <ClInclude Include="vector.h" />
     <ClInclude Include="windows_versions.h" />
   </ItemGroup>
   <ItemGroup>

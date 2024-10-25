@@ -14,7 +14,11 @@ LRESULT CALLBACK MAIN_WINDOW_callback(const HWND hwnd, const UINT uMsg, const WP
 
         case WM_CHAR:
             SendMessage(TEXTBOX_get()->hwnd, uMsg, wParam, lParam);
-            break;
+            return 0;
+
+        case WM_KEYDOWN:
+            SendMessage(TEXTBOX_get()->hwnd, uMsg, wParam, lParam);
+            return 0;
 
         case WM_SIZE:
             main_window.width = LOWORD(lParam);

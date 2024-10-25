@@ -5,8 +5,26 @@
 #define WINDOWS_HELPER_ERROR_CAPTION "Error"
 #endif
 
-AddFontResourceEx_fetched AddFontResourceEx_saved = NULL;
-RemoveFontResourceEx_fetched RemoveFontResourceEx_saved = NULL;
+#ifndef WINDOWS_HELPER_EXPAND
+#define WINDOWS_HELPER_EXPAND(macro) #macro
+#endif
+
+#ifndef WINDOWS_HELPER_EXTERN_SET
+#define WINDOWS_HELPER_EXTERN_SET(function) function##_fetched function##_saved = NULL
+#endif
+
+#ifndef WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION
+#define WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(function, library) \
+function##_fetched WINDOWS_HELPER_get_##function(void) { \
+    if (!function##_saved) { \
+        function##_saved = (function##_fetched)WINDOWS_HELPER_get_function(TEXT(library), WINDOWS_HELPER_EXPAND(function)); \
+    } \
+    return function##_saved; \
+}
+#endif
+
+WINDOWS_HELPER_EXTERN_SET(AddFontResourceEx);
+WINDOWS_HELPER_EXTERN_SET(RemoveFontResourceEx);
 
 FARPROC WINDOWS_HELPER_get_function(LPCTSTR pLibrary_name, LPCSTR pFunction_name) {
     const HMODULE library = LoadLibrary(pLibrary_name);
@@ -22,33 +40,8 @@ FARPROC WINDOWS_HELPER_get_function(LPCTSTR pLibrary_name, LPCSTR pFunction_name
     return function;
 }
 
-AddFontResourceEx_fetched WINDOWS_HELPER_get_AddFontResourceEx(void) {
-    if (!AddFontResourceEx_saved) {
-        AddFontResourceEx_saved = (AddFontResourceEx_fetched)WINDOWS_HELPER_get_function(TEXT("gdi32.dll"),
-#ifdef UNICODE
-            "AddFontResourceExW"
-#else
-            "AddFontResourceExA"
-#endif
-        );
-    }
-
-    return AddFontResourceEx_saved;
-}
-
-RemoveFontResourceEx_fetched WINDOWS_HELPER_get_RemoveFontResourceEx(void) {
-    if (!RemoveFontResourceEx_saved) {
-        RemoveFontResourceEx_saved = (RemoveFontResourceEx_fetched)WINDOWS_HELPER_get_function(TEXT("gdi32.dll"),
-#ifdef UNICODE
-            "RemoveFontResourceExW"
-#else
-            "RemoveFontResourceExA"
-#endif
-        );
-    }
-
-    return RemoveFontResourceEx_saved;
-}
+WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(AddFontResourceEx, "gdi32.dll")
+WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(RemoveFontResourceEx, "gdi32.dll")
 
 static void WINDOWS_HELPER_clean_up(WIDE_STRING *pContents) {
     WINDOWS_HELPER_error_ws(pContents);

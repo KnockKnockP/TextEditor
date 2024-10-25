@@ -5,6 +5,10 @@
 
 static TEXTBOX textbox = { 0 };
 
+static void TEXTBOX_request_redraw(void) {
+    InvalidateRect(textbox.hwnd, NULL, TRUE);
+}
+
 LRESULT CALLBACK TEXTBOX_callback(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE: {
@@ -44,7 +48,10 @@ LRESULT CALLBACK TEXTBOX_callback(const HWND hwnd, const UINT uMsg, const WPARAM
 
         case WM_CHAR:
             if (wParam == VK_BACK) {
-                WIDE_STRING_remove_last_character(&textbox.text);
+                TEXTBOX_set_caret_position(textbox.caret_x - 1, textbox.caret_y);
+                if (wcslen(textbox.text.individual_lines.pArray[textbox.caret_y]) > 0) {
+                    WIDE_STRING_remove_character_at_line(&textbox.text, textbox.caret_y, textbox.caret_x);
+                }
             } else {
 #ifndef UNICODE
                 if (IsDBCSLeadByte(wParam)) {
@@ -53,23 +60,49 @@ LRESULT CALLBACK TEXTBOX_callback(const HWND hwnd, const UINT uMsg, const WPARAM
                     } else {
                         textbox.multibyte_buffer[1] = wParam;
 
-                        WIDE_STRING_append_string_a(&textbox.text, textbox.multibyte_buffer);
+                        WIDE_STRING_append_string_a_at_line(&textbox.text, textbox.multibyte_buffer, textbox.caret_y, textbox.caret_x);
                         TEXTBOX_reset_multibyte_buffer();
+                        TEXTBOX_set_caret_position(textbox.caret_x + 1, textbox.caret_y);
                     }
                 } else {
 #endif
                     WCHAR converted = (WCHAR)wParam;
                     if (converted == L'\r') {
                         converted = L'\n';
+
+                        const int y = textbox.caret_y;
+                        TEXTBOX_set_caret_position(0, textbox.caret_y);
+                        WIDE_STRING_append_wide_char_at_line(&textbox.text, converted, y, wcslen(textbox.text.individual_lines.pArray[y]));
+
+                        TEXTBOX_set_caret_position(0, y + 1);
+                    } else {
+                        WIDE_STRING_append_wide_char_at_line(&textbox.text, converted, textbox.caret_y, textbox.caret_x);
+                        TEXTBOX_set_caret_position(textbox.caret_x + 1, textbox.caret_y);
                     }
-                    WIDE_STRING_append_wide_char(&textbox.text, converted);
 #ifndef UNICODE
                 }
 #endif
             }
 
-            InvalidateRect(hwnd, NULL, TRUE);
+            TEXTBOX_request_redraw();
             return 0;
+
+        case WM_KEYDOWN: {
+            if (wParam == VK_LEFT) {
+                TEXTBOX_set_caret_position(textbox.caret_x - 1, textbox.caret_y);
+                TEXTBOX_request_redraw();
+            } else if (wParam == VK_RIGHT) {
+                TEXTBOX_set_caret_position(textbox.caret_x + 1, textbox.caret_y);
+                TEXTBOX_request_redraw();
+            } else if (wParam == VK_UP) {
+                TEXTBOX_set_caret_position(textbox.caret_x, textbox.caret_y - 1);
+                TEXTBOX_request_redraw();
+            } else if (wParam == VK_DOWN) {
+                TEXTBOX_set_caret_position(textbox.caret_x, textbox.caret_y + 1);
+                TEXTBOX_request_redraw();
+            }
+            return 0;
+        }
 
         case WM_PAINT: {
             PAINTSTRUCT paint_struct = { 0 };
@@ -85,7 +118,7 @@ LRESULT CALLBACK TEXTBOX_callback(const HWND hwnd, const UINT uMsg, const WPARAM
                 }
             }
 
-            HBRUSH brush = CreateSolidBrush(RGB(rand() % 255, rand() % 255, rand() % 255));
+            HBRUSH brush = CreateSolidBrush(RGB(255, 255, 255));
             if (!brush) {
                 WINDOWS_HELPER_error(TEXT("Failed to create background brush."));
                 return 0;
@@ -98,36 +131,42 @@ LRESULT CALLBACK TEXTBOX_callback(const HWND hwnd, const UINT uMsg, const WPARAM
 
             DeleteObject(brush);
 
-            
-            size_t i = 0, new_lines = 0, start_of_last_line = 0;
-            while (textbox.text.pWide_string[i]) {
-                if (textbox.text.pWide_string[i++] == L'\n') {
-                    ++new_lines;
-                    start_of_last_line = i;
+            for (size_t i = 0; i < textbox.text.individual_lines.size; ++i) {
+                LPTSTR pLine = STRING_UTILITIES_wide_to_T(textbox.text.individual_lines.pArray[i]);
+                if (!pLine) {
+                    WINDOWS_HELPER_error(TEXT("Failed to convert main window's text box's text."));
+                    continue;
                 }
+
+                if (!DrawText(hdc, pLine, -1, &paint_struct.rcPaint, DT_EXPANDTABS)) {
+                    WINDOWS_HELPER_error(TEXT("Failed to fill main window's text box's text."));
+                    continue;
+                }
+
+                paint_struct.rcPaint.top += textbox.font_height;
+
+                if ((int)i == textbox.caret_y) {
+                    const size_t size = sizeof(WCHAR) * (textbox.caret_x + 1);
+                    LPWSTR caret_line = malloc(size);
+                    if (!caret_line) {
+                        continue;
+                    }
+
+                    memcpy(caret_line, textbox.text.individual_lines.pArray[i], size - sizeof(WCHAR));
+                    caret_line[textbox.caret_x] = L'\0';
+
+                    LPTSTR caret_line_t = STRING_UTILITIES_wide_to_T(caret_line);
+
+                    RECT text_size = { 0 };
+                    DrawText(hdc, caret_line_t, -1, &text_size, DT_CALCRECT | DT_EXPANDTABS);
+                    SetCaretPos(text_size.right, textbox.font_height * textbox.caret_y);
+
+                    MEMORY_HELPER_free((void **)&caret_line);
+                    MEMORY_HELPER_free((void **)&caret_line_t);
+                }
+
+                MEMORY_HELPER_free((void **)&pLine);
             }
-
-            i = start_of_last_line;
-            WIDE_STRING last_line = WIDE_STRING_create_empty();
-
-            while (textbox.text.pWide_string[i]) {
-                WIDE_STRING_append_wide_char(&last_line, textbox.text.pWide_string[i++]);
-            }
-
-            RECT text_size = { 0 };
-            LPCTSTR pLast_line = WIDE_STRING_get_T_string(&last_line);
-            DrawText(hdc, pLast_line, -1, &text_size, DT_CALCRECT | DT_EXPANDTABS);
-            WIDE_STRING_destroy(&last_line);
-            MEMORY_HELPER_free((void **)&pLast_line);
-
-            SetCaretPos(text_size.right, new_lines * textbox.font_height);
-
-            LPCTSTR pText = WIDE_STRING_get_T_string(&textbox.text);
-            if (!DrawText(hdc, pText, -1, &paint_struct.rcPaint, DT_EXPANDTABS)) {
-                WINDOWS_HELPER_error(TEXT("Failed to fill main window's text box's text."));
-                return 0;
-            }
-            MEMORY_HELPER_free((void **)&pText);
 
             EndPaint(hwnd, &paint_struct);
             return 0;
@@ -160,9 +199,10 @@ void TEXTBOX_initialize(const WORD width, const WORD height, const HWND parent, 
 #endif
     textbox.font_width = 6;
     textbox.font_height = 16;
-    textbox.wrapped_line_count = 0;
     textbox.width = width;
     textbox.height = height;
+    textbox.caret_x = 0;
+    textbox.caret_y = 0;
 
     ATOM_WRAPPER textbox_class = { 0 };
     WIDE_STRING textbox_class_name = WIDE_STRING_create_w(L"Text Box");
@@ -185,6 +225,28 @@ void TEXTBOX_initialize(const WORD width, const WORD height, const HWND parent, 
 
 const TEXTBOX *TEXTBOX_get(void) {
     return &textbox;
+}
+
+void TEXTBOX_set_caret_position(int x, int y) {
+    if (x < 0) {
+        x = 0;
+    }
+
+    if (y < 0) {
+        y = 0;
+    }
+
+    if (y >= (int)textbox.text.individual_lines.size) {
+        y = textbox.text.individual_lines.size - 1;
+    }
+
+    const size_t characters = wcslen(textbox.text.individual_lines.pArray[y]);
+    if (x > (int)characters) {
+        x = characters;
+    }
+
+    textbox.caret_x = x;
+    textbox.caret_y = y;
 }
 
 void TEXTBOX_destory(void) {

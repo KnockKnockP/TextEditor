@@ -17,14 +17,16 @@ typedef struct _TEXTBOX {
 #endif
 
     HFONT font;
-    size_t font_width, font_height, wrapped_line_count;
+    size_t font_width, font_height;
 
     WORD width, height;
+
+    int caret_x, caret_y;
 } TEXTBOX;
 
-LRESULT CALLBACK TEXTBOX_callback(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam);
 void TEXTBOX_initialize(const WORD width, const WORD height, const HWND parent, WIDE_STRING *pFont_file, WIDE_STRING *pFont_name);
 const TEXTBOX *TEXTBOX_get(void);
+void TEXTBOX_set_caret_position(int x, int y);
 void TEXTBOX_destory(void);
 
 #ifndef UNICODE
