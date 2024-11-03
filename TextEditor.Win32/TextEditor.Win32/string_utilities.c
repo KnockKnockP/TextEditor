@@ -1,51 +1,118 @@
 #include <string_utilities.h>
 #include <stdio.h>
 #include <memory_helper.h>
+#include <windows_helper.h>
 
-LPTSTR STRING_UTILITIES_wide_to_T(LPCWSTR pWide_string) {
+#ifndef PUSH_UTF8
+#define PUSH_UTF8() character = (character << 6) | (pUTF8_string[i++] & 0b00111111)
+#endif
+
+BYTE STRING_UTILITIES_DETECT_ENCODING(const BYTE * const pBytes, const size_t size) {
+    BYTE code_page = STRING_UTILITIES_ANSI;
+    if (IsTextUnicode(pBytes, size, NULL)) {
+        code_page = STRING_UTILITIES_WIDE;
+    } else if (size >= 3) {
+        if (pBytes[0] == 0xEF && pBytes[1] == 0xBB && pBytes[2] == 0xBF) {
+            code_page = STRING_UTILITIES_UTF8;
+        }
+    }
+    return code_page;
+}
+
+LPTSTR STRING_UTILITIES_w_to_t(LPCWSTR pWide_string) {
 #ifdef UNICODE
-    return (LPTSTR)STRING_UTILITIES_clone_wide_to_wide(pWide_string);
+    return (LPTSTR)STRING_UTILITIES_clone_w_to_w(pWide_string);
 #else
-    return (LPTSTR)STRING_UTILITIES_wide_to_ANSI(pWide_string);
+    return (LPTSTR)STRING_UTILITIES_w_to_a(pWide_string);
 #endif
 }
 
-LPWSTR STRING_UTILITIES_ANSI_to_wide(LPCSTR pANSI_string) {
+LPWSTR STRING_UTILITIES_a_to_w(LPCSTR pANSI_string) {
     const int wide_characters = MultiByteToWideChar(CP_ACP, 0, pANSI_string, -1, NULL, 0);
     LPWSTR pUTF_16_String = malloc(sizeof(WCHAR) * wide_characters);
     if (!pUTF_16_String) {
-        STRING_UTILITIES_THROW();
+        WINDOWS_HELPER_THROW();
         return NULL;
     }
 
     if (!MultiByteToWideChar(CP_ACP, 0, pANSI_string, -1, pUTF_16_String, wide_characters)) {
-        STRING_UTILITIES_THROW();
+        WINDOWS_HELPER_THROW();
         return NULL;
     }
     return pUTF_16_String;
 }
 
-LPSTR STRING_UTILITIES_wide_to_ANSI(LPCWSTR pWide_string) {
+LPSTR STRING_UTILITIES_w_to_a(LPCWSTR pWide_string) {
     const int ANSI_characters = WideCharToMultiByte(CP_ACP, 0, pWide_string, -1, NULL, 0, NULL, NULL);
-    CHAR *pANSI_string = malloc(sizeof(CHAR) * ANSI_characters);
+    LPSTR pANSI_string = malloc(sizeof(CHAR) * ANSI_characters);
+    if (!pANSI_string) {
+        WINDOWS_HELPER_THROW();
+        return NULL;
+    }
 
     if (!WideCharToMultiByte(CP_ACP, 0, pWide_string, -1, pANSI_string, ANSI_characters, NULL, NULL)) {
-        STRING_UTILITIES_THROW();
+        WINDOWS_HELPER_THROW();
         return NULL;
     }
     return pANSI_string;
 }
 
-LPWSTR STRING_UTILITIES_clone_wide_to_wide(LPCWSTR pOriginal) {
+LPWSTR STRING_UTILITIES_UTF8_to_w(LPCSTR pUTF8_string) {
+    WIDE_STRING wide_string = WIDE_STRING_create_empty();
+    int i = 0;
+
+    while (pUTF8_string[i]) {
+        uint32_t character = 0;
+
+        if ((pUTF8_string[i] & 0b10000000) == 0b00000000) {
+            character = pUTF8_string[i++];
+        } else if ((pUTF8_string[i] & 0b11100000) == 0b11000000) {
+            character = pUTF8_string[i++] & 0b00011111;
+            PUSH_UTF8();
+        } else if ((pUTF8_string[i] & 0b11110000) == 0b11100000) {
+            character = pUTF8_string[i++] & 0b00001111;
+            PUSH_UTF8();
+            PUSH_UTF8();
+        } else if ((pUTF8_string[i] & 0b11111000) == 0b11110000) {
+            character = pUTF8_string[i++] & 0b00000111;
+            PUSH_UTF8();
+            PUSH_UTF8();
+            PUSH_UTF8();
+        }
+
+        WCHAR converted[3] = { (WCHAR)character, 0, 0 };
+        if (character >= 0x10000) {
+            character -= 0x10000;
+            converted[0] = 0xD800 + (WCHAR)(character >> 10);
+            converted[1] = 0xDC00 + (character & 0b1111111111);
+        }
+
+        WIDE_STRING_append_string_w(&wide_string, converted);
+    }
+
+    LPWSTR cloned = STRING_UTILITIES_clone_w_to_w(wide_string.pWide_string);
+    WIDE_STRING_destroy(&wide_string);
+    return cloned;
+}
+
+LPWSTR STRING_UTILITIES_clone_w_to_w(LPCWSTR pOriginal) {
     const size_t characters = wcslen(pOriginal);
     LPWSTR pClone = malloc(sizeof(WCHAR) * (characters + 1));
     if (!pClone) {
-        STRING_UTILITIES_THROW();
+        WINDOWS_HELPER_THROW();
         return NULL;
     }
 
     wcscpy(pClone, pOriginal);
     return pClone;
+}
+
+size_t STRING_UTILITIES_characters(LPCTSTR pString) {
+#ifdef UNICODE
+    return wcslen(pString);
+#else
+    return strlen(pString);
+#endif
 }
 
 static void WIDE_STRING_update_individual_lines(WIDE_STRING *pWide_string) {
@@ -99,7 +166,7 @@ WIDE_STRING WIDE_STRING_create_empty(void) {
 
     LPWSTR pString = malloc(sizeof(WCHAR));
     if (!pString) {
-        STRING_UTILITIES_THROW();
+        WINDOWS_HELPER_THROW();
         return wide_string;
     }
 
@@ -113,7 +180,7 @@ WIDE_STRING WIDE_STRING_create_a(LPCSTR pANSI_string) {
     WIDE_STRING wide_string = { 0 };
     WIDE_STRING_initialize(&wide_string);
 
-    wide_string.pWide_string = STRING_UTILITIES_ANSI_to_wide(pANSI_string);
+    wide_string.pWide_string = STRING_UTILITIES_a_to_w(pANSI_string);
     WIDE_STRING_update_individual_lines(&wide_string);
     return wide_string;
 }
@@ -125,7 +192,7 @@ WIDE_STRING WIDE_STRING_create_w(LPCWSTR pWide_string) {
     const size_t wide_characters = wcslen(pWide_string) + 1;
     LPWSTR pString = malloc(sizeof(WCHAR) * wide_characters);
     if (!pString) {
-        STRING_UTILITIES_THROW();
+        WINDOWS_HELPER_THROW();
         return wide_string;
     }
 
@@ -143,19 +210,19 @@ WIDE_STRING WIDE_STRING_create(LPCTSTR pT_string) {
 #endif
 }
 
-LPCTSTR WIDE_STRING_get_T_string(WIDE_STRING *pWide_string) {
+LPCTSTR WIDE_STRING_get_t_string(WIDE_STRING *pWide_string) {
 #ifdef UNICODE
     const size_t characters = wcslen(pWide_string->pWide_string);
     LPWSTR temporary = malloc(sizeof(WCHAR) * (characters + 1));
     if (!temporary) {
-        STRING_UTILITIES_THROW();
+        WINDOWS_HELPER_THROW();
         return NULL;
     }
 
     wcscpy(temporary, pWide_string->pWide_string);
     return temporary;
 #else
-    return STRING_UTILITIES_wide_to_ANSI(pWide_string->pWide_string);
+    return STRING_UTILITIES_w_to_a(pWide_string->pWide_string);
 #endif
 }
 
@@ -163,7 +230,7 @@ void WIDE_STRING_append_wide_char(WIDE_STRING *pOriginal, const WCHAR additional
     const size_t characters = wcslen(pOriginal->pWide_string) + 2;
     LPWSTR pString = malloc(sizeof(WCHAR) * characters);
     if (!pString) {
-        STRING_UTILITIES_THROW();
+        WINDOWS_HELPER_THROW();
         return;
     }
 
@@ -180,7 +247,7 @@ void WIDE_STRING_append_wide_char_at(WIDE_STRING *pOriginal, const WCHAR additio
     const size_t original_length = wcslen(pOriginal->pWide_string);
     LPWSTR pNew = malloc(sizeof(WCHAR) * (original_length + 2));
     if (!pNew) {
-        STRING_UTILITIES_THROW();
+        WINDOWS_HELPER_THROW();
         return;
     }
 
@@ -205,7 +272,7 @@ void WIDE_STRING_append_string_a(WIDE_STRING *pOriginal, LPCSTR pAdditional) {
     const size_t characters = wcslen(pOriginal->pWide_string) + wcslen(additional_wide.pWide_string) + 1;
     LPWSTR pString = malloc(sizeof(WCHAR) * characters);
     if (!pString) {
-        STRING_UTILITIES_THROW();
+        WINDOWS_HELPER_THROW();
         return;
     }
 
@@ -219,12 +286,22 @@ void WIDE_STRING_append_string_a(WIDE_STRING *pOriginal, LPCSTR pAdditional) {
 }
 
 void WIDE_STRING_append_string_a_at(WIDE_STRING *pOriginal, LPCSTR pAdditional, const size_t at) {
-    LPCWSTR pAdditional_wide = STRING_UTILITIES_ANSI_to_wide(pAdditional);
-    const size_t original_characters = wcslen(pOriginal->pWide_string), additional_characters = wcslen(pAdditional_wide);
+    LPCWSTR pAdditional_wide = STRING_UTILITIES_a_to_w(pAdditional);
+    WIDE_STRING_append_string_w_at(pOriginal, pAdditional_wide, at);
+}
+
+void WIDE_STRING_append_string_w(WIDE_STRING *pOriginal, LPCWSTR pAdditional) {
+    WIDE_STRING additional_wide = WIDE_STRING_create_w(pAdditional);
+    WIDE_STRING_append_WIDE_STRING(pOriginal, &additional_wide);
+    WIDE_STRING_destroy(&additional_wide);
+}
+
+void WIDE_STRING_append_string_w_at(WIDE_STRING *pOriginal, LPCWSTR pAdditional, const size_t at) {
+    const size_t original_characters = wcslen(pOriginal->pWide_string), additional_characters = wcslen(pAdditional);
 
     LPWSTR pNew = malloc(sizeof(WCHAR) * (original_characters + additional_characters + 1));
     if (!pNew) {
-        STRING_UTILITIES_THROW();
+        WINDOWS_HELPER_THROW();
         return;
     }
 
@@ -232,21 +309,20 @@ void WIDE_STRING_append_string_a_at(WIDE_STRING *pOriginal, LPCSTR pAdditional, 
     for (; i < at; ++i) {
         pNew[i] = pOriginal->pWide_string[i];
     }
+
+    for (size_t j = 0; j < additional_characters; ++i, ++j) {
+        pNew[i] = pAdditional[j];
+    }
+
+    for (size_t j = at; j < original_characters; ++i, ++j) {
+        pNew[i] = pOriginal->pWide_string[j];
+    }
+
     pNew[i] = L'\0';
 
-    wcscat(pNew, pAdditional_wide);
-    wcscat(pNew, pOriginal->pWide_string + i + additional_characters - 1);
-
-    MEMORY_HELPER_free((void **)&pAdditional_wide);
     MEMORY_HELPER_free((void **)&pOriginal->pWide_string);
     pOriginal->pWide_string = pNew;
     WIDE_STRING_update_individual_lines(pOriginal);
-}
-
-void WIDE_STRING_append_string_w(WIDE_STRING *pOriginal, LPCWSTR pAdditional) {
-    WIDE_STRING additional_wide = WIDE_STRING_create_w(pAdditional);
-    WIDE_STRING_append_WIDE_STRING(pOriginal, &additional_wide);
-    WIDE_STRING_destroy(&additional_wide);
 }
 
 void WIDE_STRING_append_string(WIDE_STRING *pOriginal, LPCTSTR pAdditional) {
@@ -257,11 +333,19 @@ void WIDE_STRING_append_string(WIDE_STRING *pOriginal, LPCTSTR pAdditional) {
 #endif
 }
 
+void WIDE_STRING_append_string_at(WIDE_STRING *pOriginal, LPCTSTR pAdditional, const size_t at) {
+#ifdef UNICODE
+    WIDE_STRING_append_string_w_at(pOriginal, pAdditional, at);
+#else
+    WIDE_STRING_append_string_a_at(pOriginal, pAdditional, at);
+#endif
+}
+
 void WIDE_STRING_append_WIDE_STRING(WIDE_STRING *pOriginal, const WIDE_STRING *pAdditional) {
     const size_t characters = wcslen(pOriginal->pWide_string) + wcslen(pAdditional->pWide_string) + 1;
     LPWSTR pString = malloc(sizeof(WCHAR) * characters);
     if (!pString) {
-        STRING_UTILITIES_THROW();
+        WINDOWS_HELPER_THROW();
         return;
     }
 
@@ -281,7 +365,7 @@ void WIDE_STRING_remove_last_character(WIDE_STRING *pWide_string) {
 
     LPWSTR pString = malloc(sizeof(WCHAR) * wide_characters);
     if (!pString) {
-        STRING_UTILITIES_THROW();
+        WINDOWS_HELPER_THROW();
         return;
     }
 
@@ -297,7 +381,7 @@ void WIDE_STRING_remove_character_at(WIDE_STRING *pWide_string, const size_t at)
     size_t wide_characters = wcslen(pWide_string->pWide_string);
     LPWSTR pNew = malloc(sizeof(WCHAR) * wide_characters);
     if (!pNew) {
-        STRING_UTILITIES_THROW();
+        WINDOWS_HELPER_THROW();
         return;
     }
 
@@ -327,7 +411,7 @@ void WIDE_STRING_append_wide_char_at_line(WIDE_STRING *pOriginal, const WCHAR ad
     WIDE_STRING wide_line = WIDE_STRING_create_w(pOriginal->individual_lines.pArray[line]);
     WIDE_STRING_append_wide_char_at(&wide_line, additional, at);
 
-    LPWSTR pClone = STRING_UTILITIES_clone_wide_to_wide(wide_line.pWide_string);
+    LPWSTR pClone = STRING_UTILITIES_clone_w_to_w(wide_line.pWide_string);
     WIDE_STRING_at_to_at_line_clean_up(pOriginal, &wide_line, line, pClone);
 }
 
@@ -335,15 +419,31 @@ void WIDE_STRING_append_string_a_at_line(WIDE_STRING *pOriginal, LPCSTR pAdditio
     WIDE_STRING wide_line = WIDE_STRING_create_w(pOriginal->individual_lines.pArray[line]);
     WIDE_STRING_append_string_a_at(&wide_line, pAdditional, at);
 
-    LPWSTR pClone = STRING_UTILITIES_clone_wide_to_wide(wide_line.pWide_string);
+    LPWSTR pClone = STRING_UTILITIES_clone_w_to_w(wide_line.pWide_string);
     WIDE_STRING_at_to_at_line_clean_up(pOriginal, &wide_line, line, pClone);
+}
+
+void WIDE_STRING_append_string_w_at_line(WIDE_STRING *pOriginal, LPCWSTR pAdditional, const size_t line, const size_t at) {
+    WIDE_STRING wide_line = WIDE_STRING_create_w(pOriginal->individual_lines.pArray[line]);
+    WIDE_STRING_append_string_w_at(&wide_line, pAdditional, at);
+
+    LPWSTR pClone = STRING_UTILITIES_clone_w_to_w(wide_line.pWide_string);
+    WIDE_STRING_at_to_at_line_clean_up(pOriginal, &wide_line, line, pClone);
+}
+
+void WIDE_STRING_append_string_at_line(WIDE_STRING *pOriginal, LPCTSTR pAdditional, const size_t line, const size_t at) {
+#ifdef UNICODE
+    WIDE_STRING_append_string_w_at_line(pOriginal, pAdditional, line, at);
+#else
+    WIDE_STRING_append_string_a_at_line(pOriginal, pAdditional, line, at);
+#endif
 }
 
 void WIDE_STRING_remove_character_at_line(WIDE_STRING *pOriginal, const size_t line, const size_t at) {
     WIDE_STRING wide_line = WIDE_STRING_create_w(pOriginal->individual_lines.pArray[line]);
     WIDE_STRING_remove_character_at(&wide_line, at);
 
-    LPWSTR pClone = STRING_UTILITIES_clone_wide_to_wide(wide_line.pWide_string);
+    LPWSTR pClone = STRING_UTILITIES_clone_w_to_w(wide_line.pWide_string);
     WIDE_STRING_at_to_at_line_clean_up(pOriginal, &wide_line, line, pClone);
 }
 
@@ -355,7 +455,7 @@ void WIDE_STRING_consolidate_individual_lines(WIDE_STRING *pWide_string) {
 
     LPWSTR pNew = malloc(sizeof(WCHAR) * characters);
     if (!pNew) {
-        STRING_UTILITIES_THROW();
+        WINDOWS_HELPER_THROW();
         return;
     }
     pNew[0] = L'\0';

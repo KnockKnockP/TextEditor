@@ -1,3 +1,5 @@
+//#define CONSOLE
+
 #if _DEBUG
 #define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>
@@ -5,8 +7,13 @@
 #endif
 
 #include <Windows.h>
+#include <CommCtrl.h>
 #include <main_window.h>
 #include <windows_helper.h>
+
+#ifdef CONSOLE
+#include <stdio.h>
+#endif
 
 #ifdef CRT_MAIN
 int WinMainCRTStartup(void)
@@ -23,6 +30,13 @@ WinMain
 #if _DEBUG
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
+
+#ifdef CONSOLE
+    AllocConsole();
+    freopen("CONOUT$", "wt", stdout);
+#endif
+
+    InitCommonControls();
 
     MAIN_WINDOW_initialize();
     MAIN_WINDOW_show();

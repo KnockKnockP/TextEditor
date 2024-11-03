@@ -398,4 +398,4 @@ FodyWeavers.xsd
 *.sln.iml
 
 **/Tools/*
-!**/Tools/*/Download.txt
+!**/Tools/Download.txt

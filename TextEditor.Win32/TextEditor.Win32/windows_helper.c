@@ -1,5 +1,5 @@
-#include <memory_helper.h>
 #include <windows_helper.h>
+#include <memory_helper.h>
 
 #ifndef WINDOWS_HELPER_ERROR_CAPTION
 #define WINDOWS_HELPER_ERROR_CAPTION "Error"
@@ -9,12 +9,9 @@
 #define WINDOWS_HELPER_EXPAND(macro) #macro
 #endif
 
-#ifndef WINDOWS_HELPER_EXTERN_SET
-#define WINDOWS_HELPER_EXTERN_SET(function) function##_fetched function##_saved = NULL
-#endif
-
 #ifndef WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION
 #define WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(function, library) \
+function##_fetched function##_saved = NULL; \
 function##_fetched WINDOWS_HELPER_get_##function(void) { \
     if (!function##_saved) { \
         function##_saved = (function##_fetched)WINDOWS_HELPER_get_function(TEXT(library), WINDOWS_HELPER_EXPAND(function)); \
@@ -23,8 +20,11 @@ function##_fetched WINDOWS_HELPER_get_##function(void) { \
 }
 #endif
 
-WINDOWS_HELPER_EXTERN_SET(AddFontResourceEx);
-WINDOWS_HELPER_EXTERN_SET(RemoveFontResourceEx);
+WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(AddFontResourceEx, "gdi32.dll")
+WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(RemoveFontResourceEx, "gdi32.dll")
+WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(ImmGetContext, "imm32.dll")
+WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(ImmGetCompositionString, "imm32.dll")
+WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(ImmReleaseContext, "imm32.dll")
 
 FARPROC WINDOWS_HELPER_get_function(LPCTSTR pLibrary_name, LPCSTR pFunction_name) {
     const HMODULE library = LoadLibrary(pLibrary_name);
@@ -40,8 +40,10 @@ FARPROC WINDOWS_HELPER_get_function(LPCTSTR pLibrary_name, LPCSTR pFunction_name
     return function;
 }
 
-WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(AddFontResourceEx, "gdi32.dll")
-WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(RemoveFontResourceEx, "gdi32.dll")
+BOOL WINDOWS_HELPER_file_exists(LPCTSTR file) {
+    const DWORD attributes = GetFileAttributes(file);
+    return (attributes != INVALID_FILE_ATTRIBUTES && !(attributes & FILE_ATTRIBUTE_DIRECTORY));
+}
 
 static void WINDOWS_HELPER_clean_up(WIDE_STRING *pContents) {
     WINDOWS_HELPER_error_ws(pContents);
@@ -59,7 +61,7 @@ void WINDOWS_HELPER_error_w(LPCWSTR pContents) {
 }
 
 void WINDOWS_HELPER_error_ws(WIDE_STRING *pContents) {
-    LPCTSTR pContents_t = WIDE_STRING_get_T_string(pContents);
+    LPCTSTR pContents_t = WIDE_STRING_get_t_string(pContents);
     MessageBox(NULL, pContents_t, TEXT(WINDOWS_HELPER_ERROR_CAPTION), MB_OK | MB_ICONERROR);
     MEMORY_HELPER_free((void **)&pContents_t);
 }

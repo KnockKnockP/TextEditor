@@ -10,7 +10,9 @@ typedef struct _TEXTBOX {
     HWND hwnd;
 
     WIDE_STRING *pFont_file, *pFont_name, text;
-    LPCTSTR pFont_file_t;
+    LPCTSTR pFont_file_t, pFont_name_t;
+
+    WIDE_STRING ime;
 
 #ifndef UNICODE
     CHAR multibyte_buffer[3];
@@ -26,6 +28,8 @@ typedef struct _TEXTBOX {
 
 void TEXTBOX_initialize(const WORD width, const WORD height, const HWND parent, WIDE_STRING *pFont_file, WIDE_STRING *pFont_name);
 const TEXTBOX *TEXTBOX_get(void);
+void TEXTBOX_set_text(const WIDE_STRING text);
+void TEXTBOX_request_redraw(void);
 void TEXTBOX_set_caret_position(int x, int y);
 void TEXTBOX_destory(void);
 

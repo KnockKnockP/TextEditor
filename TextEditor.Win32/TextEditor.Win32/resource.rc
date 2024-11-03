@@ -1,0 +1,14 @@
+#include "resource.h"
+
+1 24 "TextEditor.exe.manifest"
+
+IDR_MAIN_WINDOW_MENU MENU
+BEGIN
+    POPUP "File"
+    BEGIN
+        MENUITEM "Open",                        ID_FILE_OPEN
+        MENUITEM "Save",                        ID_FILE_SAVE
+        MENUITEM SEPARATOR
+        MENUITEM "Quit",                        ID_FILE_QUIT
+    END
+END

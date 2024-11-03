@@ -1,7 +1,7 @@
 CXX = gcc
 
 ifdef OLD_TOOLS
-	CXX = ./Tools/i686-8.1.0-release-win32-dwarf-rt_v6-rev0/bin/gcc.exe
+	CXX = ./Tools/gcc_win98/bin/gcc.exe
 endif
 
 UNICODE = -DUNICODE -D_UNICODE -municode
@@ -16,19 +16,19 @@ ifdef NO_UNICODE
 	UNICODE_BUILD_PATH = ANSI
 endif
 
-LINKS = -static
-ifdef USE_CRT_MAIN
-	CRT_MAIN = -DCRT_MAIN -ffreestanding
-	LINKS = -nostdlib -lmsvcrt -lkernel32 -luser32 -lgdi32
-endif
-
 SOURCE_DIR = ./TextEditor.Win32
 INCLUDE_DIR = $(SOURCE_DIR)
 RESOURCES_DIR = $(SOURCE_DIR)/Resources
 BIN_DIR = ./bin
 BUILD_DIR = $(BIN_DIR)/$(ARCH)/$(WINDOWS_VERSION)/$(UNICODE_BUILD_PATH)/$(BIT)
 
-CXXFLAGS = -Wall -Wextra -pedantic -O3 -Ofast -std=c11 $(UNICODE) $(CRT_MAIN) -DWINDOWS_VERSION=$(WINDOWS_VERSION) -march=$(ARCH) -mtune=$(ARCH) -m$(BIT) -mwindows
+LINKS = $(BUILD_DIR)/resource.o
+ifdef USE_CRT_MAIN
+	CRT_MAIN = -DCRT_MAIN -ffreestanding
+	LINKS += -nostdlib -lmsvcrt -lkernel32 -luser32 -lgdi32 -limm32 -lcomdlg32 -ladvapi32 -lcomctl32
+endif
+
+CXXFLAGS = -Wall -Wextra -pedantic -O3 -Ofast -std=c2x $(UNICODE) $(CRT_MAIN) -D_WIN32_WINNT=$(WINDOWS_VERSION) -march=$(ARCH) -mtune=$(ARCH) -m$(BIT) -mwindows
 
 TARGET = $(BUILD_DIR)/TextEditor.exe
 SRCS = $(wildcard $(SOURCE_DIR)/*.c)
@@ -40,6 +40,7 @@ all: $(TARGET) RESOURCES
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
+	windres $(SOURCE_DIR)/resource.rc -o $(BUILD_DIR)/resource.o
 
 $(TARGET): $(SRCS) | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LINKS) -I$(INCLUDE_DIR)

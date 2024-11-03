@@ -2,10 +2,11 @@
 #include <memory_helper.h>
 #include <windows_helper.h>
 
-void ATOM_WRAPPER_initialize(ATOM_WRAPPER *pAtom_wrapper, WIDE_STRING *pName, const WNDPROC callback) {
+void ATOM_WRAPPER_initialize(ATOM_WRAPPER *pAtom_wrapper, WIDE_STRING *pName, const UINT style, const WNDPROC callback) {
     WNDCLASS wndClass = { 0 };
+    wndClass.lpszClassName = WIDE_STRING_get_t_string(pName);
+    wndClass.style = style;
     wndClass.lpfnWndProc = callback;
-    wndClass.lpszClassName = WIDE_STRING_get_T_string(pName);
 
     pAtom_wrapper->atom = RegisterClass(&wndClass);
     if (!pAtom_wrapper->atom) {
