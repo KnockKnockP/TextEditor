@@ -1,22 +1,90 @@
 #include <string_utilities.h>
-#include <stdio.h>
 #include <memory_helper.h>
 #include <windows_helper.h>
 
-#ifndef PUSH_UTF8
-#define PUSH_UTF8() character = (character << 6) | (pUTF8_string[i++] & 0b00111111)
+#ifndef STRING_UTILITIES_PUSH_UTF8
+#define STRING_UTILITIES_PUSH_UTF8() character = (character << 6) | (pUTF8_string[i++] & 0b00111111)
 #endif
 
-BYTE STRING_UTILITIES_DETECT_ENCODING(const BYTE * const pBytes, const size_t size) {
-    BYTE code_page = STRING_UTILITIES_ANSI;
-    if (IsTextUnicode(pBytes, size, NULL)) {
+static BOOL STRING_UTILITIES_CHECK_UTF8_BOUNDARY(const size_t size, const size_t i, const size_t cluster_size) {
+    return size >= cluster_size && i < size;
+}
+
+static BOOL STRING_UTILITIES_CHECK_UTF8_CLUSTER_FOLLOW_UPS(const BYTE * const pBytes, const size_t i) {
+    return (pBytes[i] & 0b11000000) == 0b10000000;
+}
+
+static BOOL STRING_UTILITIES_CHECK_UTF8_CLUSTER_1(const byte UTF8_byte) {
+    return (UTF8_byte & 0b10000000) == 0b00000000;
+}
+
+static BOOL STRING_UTILITIES_CHECK_UTF8_CLUSTER_2(const BYTE * const pBytes, const size_t size, const size_t i) {
+    return STRING_UTILITIES_CHECK_UTF8_BOUNDARY(size, i, 2) &&
+           ((pBytes[i] & 0b11100000) == 0b11000000) &&
+           STRING_UTILITIES_CHECK_UTF8_CLUSTER_FOLLOW_UPS(pBytes, i + 1);
+}
+
+static BOOL STRING_UTILITIES_CHECK_UTF8_CLUSTER_3(const BYTE * const pBytes, const size_t size, const size_t i) {
+    return STRING_UTILITIES_CHECK_UTF8_BOUNDARY(size, i, 3) &&
+           ((pBytes[i] & 0b11110000) == 0b11100000) &&
+           STRING_UTILITIES_CHECK_UTF8_CLUSTER_FOLLOW_UPS(pBytes, i + 1) &&
+           STRING_UTILITIES_CHECK_UTF8_CLUSTER_FOLLOW_UPS(pBytes, i + 2);
+}
+
+static BOOL STRING_UTILITIES_CHECK_UTF8_CLUSTER_4(const BYTE * const pBytes, const size_t size, const size_t i) {
+    return STRING_UTILITIES_CHECK_UTF8_BOUNDARY(size, i, 4) &&
+           ((pBytes[i] & 0b11111000) == 0b11110000) &&
+           STRING_UTILITIES_CHECK_UTF8_CLUSTER_FOLLOW_UPS(pBytes, i + 1) &&
+           STRING_UTILITIES_CHECK_UTF8_CLUSTER_FOLLOW_UPS(pBytes, i + 2) &&
+           STRING_UTILITIES_CHECK_UTF8_CLUSTER_FOLLOW_UPS(pBytes, i + 3);
+}
+
+BYTE STRING_UTILITIES_detect_encoding(const BYTE * const pBytes, const size_t size) {
+    BYTE code_page = STRING_UTILITIES_UTF8;
+    if (size >= 2 && pBytes[0] == 0xFF && pBytes[1] == 0xFE) {
+        //WIDE means UTF-16 LE with BOM for now.
         code_page = STRING_UTILITIES_WIDE;
-    } else if (size >= 3) {
-        if (pBytes[0] == 0xEF && pBytes[1] == 0xBB && pBytes[2] == 0xBF) {
-            code_page = STRING_UTILITIES_UTF8;
+    } else if (size >= 3 && pBytes[0] == 0xEF && pBytes[1] == 0xBB && pBytes[2] == 0xBF) {
+        code_page = STRING_UTILITIES_UTF8_WITH_BOM;
+    } else {
+        size_t i = 0;
+        while (pBytes[i]) {
+            //If no valid UTF-8 bytes are found, assume ANSI.
+            if (STRING_UTILITIES_CHECK_UTF8_CLUSTER_1(pBytes[i])) {
+                ++i;
+            } else if (STRING_UTILITIES_CHECK_UTF8_CLUSTER_2(pBytes, size, i)) {
+                i += 2;
+            } else if (STRING_UTILITIES_CHECK_UTF8_CLUSTER_3(pBytes, size, i)) {
+                i += 3;
+            } else if (STRING_UTILITIES_CHECK_UTF8_CLUSTER_4(pBytes, size, i)) {
+                i += 4;
+            } else {
+                code_page = STRING_UTILITIES_ANSI;
+                break;
+            }
         }
     }
     return code_page;
+}
+
+LPTSTR STRING_UTILITIES_encoding_enum_to_string(const BYTE encoding_enum) {
+    if (encoding_enum == STRING_UTILITIES_ANSI) {
+        return TEXT("ANSI");
+    }
+
+    if (encoding_enum == STRING_UTILITIES_WIDE) {
+        return TEXT("UTF-16 LE BOM (Wide)");
+    }
+
+    if (encoding_enum == STRING_UTILITIES_UTF8) {
+        return TEXT("UTF-8");
+    }
+
+    if (encoding_enum == STRING_UTILITIES_UTF8_WITH_BOM) {
+        return TEXT("UTF-8 BOM");
+    }
+
+    return TEXT("Unknown Encoding");
 }
 
 LPTSTR STRING_UTILITIES_w_to_t(LPCWSTR pWide_string) {
@@ -59,25 +127,26 @@ LPSTR STRING_UTILITIES_w_to_a(LPCWSTR pWide_string) {
 
 LPWSTR STRING_UTILITIES_UTF8_to_w(LPCSTR pUTF8_string) {
     WIDE_STRING wide_string = WIDE_STRING_create_empty();
+    const size_t size = strlen(pUTF8_string);
     int i = 0;
 
     while (pUTF8_string[i]) {
         uint32_t character = 0;
 
-        if ((pUTF8_string[i] & 0b10000000) == 0b00000000) {
+        if (STRING_UTILITIES_CHECK_UTF8_CLUSTER_1(pUTF8_string[i])) {
             character = pUTF8_string[i++];
-        } else if ((pUTF8_string[i] & 0b11100000) == 0b11000000) {
+        } else if (STRING_UTILITIES_CHECK_UTF8_CLUSTER_2((const BYTE * const)pUTF8_string, size, i)) {
             character = pUTF8_string[i++] & 0b00011111;
-            PUSH_UTF8();
-        } else if ((pUTF8_string[i] & 0b11110000) == 0b11100000) {
+            STRING_UTILITIES_PUSH_UTF8();
+        } else if (STRING_UTILITIES_CHECK_UTF8_CLUSTER_3((const BYTE * const)pUTF8_string, size, i)) {
             character = pUTF8_string[i++] & 0b00001111;
-            PUSH_UTF8();
-            PUSH_UTF8();
-        } else if ((pUTF8_string[i] & 0b11111000) == 0b11110000) {
+            STRING_UTILITIES_PUSH_UTF8();
+            STRING_UTILITIES_PUSH_UTF8();
+        } else if (STRING_UTILITIES_CHECK_UTF8_CLUSTER_4((const BYTE * const)pUTF8_string, size, i)) {
             character = pUTF8_string[i++] & 0b00000111;
-            PUSH_UTF8();
-            PUSH_UTF8();
-            PUSH_UTF8();
+            STRING_UTILITIES_PUSH_UTF8();
+            STRING_UTILITIES_PUSH_UTF8();
+            STRING_UTILITIES_PUSH_UTF8();
         }
 
         WCHAR converted[3] = { (WCHAR)character, 0, 0 };

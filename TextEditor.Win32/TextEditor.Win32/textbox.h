@@ -3,37 +3,50 @@
 
 #include <stdint.h>
 #include <Windows.h>
+#include <XY.h>
+#include <atom_wrapper.h>
 #include <windows_helper.h>
 #include <string_utilities.h>
 
-typedef struct _TEXTBOX {
-    HWND hwnd;
+typedef struct _TEXT_FILE {
+    WIDE_STRING text;
+    BYTE encoding;
+} TEXT_FILE;
 
-    WIDE_STRING *pFont_file, *pFont_name, text;
+void TEXT_FILE_destroy(TEXT_FILE *pText_file);
+
+typedef struct _FONT {
+    HFONT font;
+    XY size;
+    WIDE_STRING *pFont_file, *pFont_name;
     LPCTSTR pFont_file_t, pFont_name_t;
+} FONT;
+
+typedef struct _TEXTBOX {
+    ATOM_WRAPPER registered_class;
+    HWND hwnd, status_bar_hwnd;
+    XY size, caret;
+    TEXT_FILE file;
+    FONT font;
 
     WIDE_STRING ime;
-
 #ifndef UNICODE
     CHAR multibyte_buffer[3];
 #endif
-
-    HFONT font;
-    size_t font_width, font_height;
-
-    WORD width, height;
-
-    int caret_x, caret_y;
 } TEXTBOX;
 
-void TEXTBOX_initialize(const WORD width, const WORD height, const HWND parent, WIDE_STRING *pFont_file, WIDE_STRING *pFont_name);
-const TEXTBOX *TEXTBOX_get(void);
-void TEXTBOX_set_text(const WIDE_STRING text);
-void TEXTBOX_request_redraw(void);
-void TEXTBOX_set_caret_position(int x, int y);
-void TEXTBOX_destory(void);
+typedef TEXTBOX* PTEXTBOX;
+VECTOR_DECLARE_ALL(PTEXTBOX);
+
+TEXTBOX *TEXTBOX_create(const HWND parent,
+                        const XY size,
+                        WIDE_STRING *pFont_file,
+                        WIDE_STRING *pFont_name);
+void TEXTBOX_set_file(TEXTBOX *pTextbox, const TEXT_FILE text_file);
+void TEXTBOX_request_redraw(const TEXTBOX *pTextbox);
+void TEXTBOX_set_caret_position(TEXTBOX *pTextbox, int x, int y);
 
 #ifndef UNICODE
-void TEXTBOX_reset_multibyte_buffer(void);
+void TEXTBOX_reset_multibyte_buffer(TEXTBOX *pTextbox);
 #endif
 #endif

@@ -22,10 +22,10 @@ RESOURCES_DIR = $(SOURCE_DIR)/Resources
 BIN_DIR = ./bin
 BUILD_DIR = $(BIN_DIR)/$(ARCH)/$(WINDOWS_VERSION)/$(UNICODE_BUILD_PATH)/$(BIT)
 
-LINKS = $(BUILD_DIR)/resource.o
+LINKS = $(BUILD_DIR)/resource.o -lcomctl32
 ifdef USE_CRT_MAIN
 	CRT_MAIN = -DCRT_MAIN -ffreestanding
-	LINKS += -nostdlib -lmsvcrt -lkernel32 -luser32 -lgdi32 -limm32 -lcomdlg32 -ladvapi32 -lcomctl32
+	LINKS += -nostdlib -lmsvcrt -lkernel32 -luser32 -lgdi32 -limm32 -lcomdlg32 -ladvapi32
 endif
 
 CXXFLAGS = -Wall -Wextra -pedantic -O3 -Ofast -std=c2x $(UNICODE) $(CRT_MAIN) -D_WIN32_WINNT=$(WINDOWS_VERSION) -march=$(ARCH) -mtune=$(ARCH) -m$(BIT) -mwindows

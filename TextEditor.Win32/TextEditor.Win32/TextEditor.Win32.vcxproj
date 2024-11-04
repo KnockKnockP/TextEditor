@@ -129,6 +129,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="vector.h" />
     <ClInclude Include="windows_versions.h" />
+    <ClInclude Include="XY.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main_window.h" />

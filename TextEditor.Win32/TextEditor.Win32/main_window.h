@@ -5,14 +5,13 @@
 #include <textbox.h>
 
 typedef struct _MAIN_WINDOW {
-    HWND hwnd;
-    WORD width, height;
+    HWND hwnd, mdi;
+    XY size;
 
-    TEXTBOX textbox;
+    TEXTBOX *pSelected_textbox;
     WIDE_STRING font_file, font_name;
 } MAIN_WINDOW;
 
 void MAIN_WINDOW_initialize(void);
 void MAIN_WINDOW_show(void);
-void MAIN_WINDOW_destroy(void);
 #endif

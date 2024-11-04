@@ -1,19 +1,14 @@
-//{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ generated include file.
-// Used by resource.rc
-//
-#define IDR_MAIN_WINDOW_MENU            101
-#define ID_FILE_OPEN                    40001
-#define ID_FILE_SAVE                    40002
-#define ID_FILE_QUIT                    40003
+#define IDR_MAIN_WINDOW_MENU_MDI        101
+#define IDR_MAIN_WINDOW_MENU_SDI        102
 
-// Next default values for new objects
-// 
-#ifdef APSTUDIO_INVOKED
-#ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        104
-#define _APS_NEXT_COMMAND_VALUE         40005
-#define _APS_NEXT_CONTROL_VALUE         1000
-#define _APS_NEXT_SYMED_VALUE           101
-#endif
-#endif
+#define IDR_TEXTBOX_MENU_MDI            103
+#define IDR_TEXTBOX_STATUS_BAR          104
+
+#define ID_MAIN_WINDOW_MDI_FILE_OPEN    40001
+#define ID_FILE_QUIT                    40002
+
+#define ID_MAIN_WINDOW_SDI_FILE_OPEN    40003
+#define ID_MAIN_WINDOW_SDI_FILE_SAVE    40004
+
+#define ID_TEXTBOX_MDI_FILE_SAVE        40005
+#define ID_TEXTBOX_MDI_FILE_CLOSE       40006

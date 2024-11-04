@@ -5,6 +5,8 @@
 #include <windows_helper.h>
 #include <string_utilities.h>
 
+#include <stdio.h>
+
 #ifndef MAIN_WINDOW_OPEN
 #define MAIN_WINDOW_OPEN 1
 #endif
@@ -19,169 +21,164 @@
 
 static MAIN_WINDOW main_window = { 0 };
 
-LRESULT CALLBACK MAIN_WINDOW_callback(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
+LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE: {
-            const HMENU menu = LoadMenu(NULL, MAKEINTRESOURCE(IDR_MAIN_WINDOW_MENU));
-            if (menu) {
-                SetMenu(hwnd, menu);
-            } else {
-                WINDOWS_HELPER_error(TEXT("Failed to load main window's menu bar."));
+            if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_MULTIPLE_DOCUMENT_INTERFACE) {
+                CLIENTCREATESTRUCT client_create_struct = { 0 };
+                client_create_struct.hWindowMenu = NULL;
+                client_create_struct.idFirstChild = IDR_MAIN_WINDOW_MENU_SDI;
+                main_window.mdi = CreateWindow(TEXT("MDICLIENT"), NULL,
+                                               WS_CHILD | WS_CLIPCHILDREN | WS_VISIBLE,
+                                               0, 0, main_window.size.x, main_window.size.y,
+                                               hwnd, NULL, NULL, &client_create_struct);
+
+                TEXTBOX *pTextbox = TEXTBOX_create(hwnd, main_window.size, &main_window.font_file, &main_window.font_name);
+
+                MDICREATESTRUCT mdi_create_struct = { 0 };
+                mdi_create_struct.szClass = pTextbox->registered_class.class_name_t;
+                mdi_create_struct.szTitle = pTextbox->registered_class.class_name_t;
+                mdi_create_struct.x = CW_USEDEFAULT;
+                mdi_create_struct.y = CW_USEDEFAULT;
+
+                RECT size = { 0 };
+                GetWindowRect(hwnd, &size);
+                mdi_create_struct.cx = size.right / 2;
+                mdi_create_struct.cy = size.bottom / 2;
+
+                pTextbox->hwnd = (HWND)SendMessage(main_window.mdi, WM_MDICREATE, 0, (LPARAM)(MDICREATESTRUCT *)&mdi_create_struct);
+            } else if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_SINGLE_DOCUMENT_INTERFACE) {
+                const HMENU menu = LoadMenu(NULL, MAKEINTRESOURCE(IDR_MAIN_WINDOW_MENU_SDI));
+                if (menu) {
+                    SetMenu(hwnd, menu);
+                } else {
+                    WINDOWS_HELPER_error(TEXT("Failed to load main window's menu bar."));
+                }
+
+                main_window.pSelected_textbox = TEXTBOX_create(hwnd, main_window.size, &main_window.font_file, &main_window.font_name);
             }
-
-            /*
-            HMENU menu = CreateMenu(), file_menu = CreatePopupMenu();
-            if (menu && file_menu) {
-                if (!AppendMenu(file_menu, MF_STRING, MAIN_WINDOW_OPEN, TEXT("Open"))) {
-                    WINDOWS_HELPER_error(TEXT("Failed to add entry to main window's menu bar's submenu."));
-                }
-
-                if (!AppendMenu(file_menu, MF_STRING, MAIN_WINDOW_SAVE, TEXT("Save"))) {
-                    WINDOWS_HELPER_error(TEXT("Failed to add entry to main window's menu bar's submenu."));
-                }
-
-                if (!AppendMenu(file_menu, MF_STRING, MAIN_WINDOW_QUIT, TEXT("Quit"))) {
-                    WINDOWS_HELPER_error(TEXT("Failed to add entry to main window's menu bar's submenu."));
-                }
-
-                if (!AppendMenu(menu, MF_POPUP, (UINT_PTR)file_menu, TEXT("File"))) {
-                    WINDOWS_HELPER_error(TEXT("Failed to add entry to main window's menu bar."));
-                }
-
-                if (!SetMenu(hwnd, menu)) {
-                    WINDOWS_HELPER_error(TEXT("Failed to add main window's menu bar."));
-                }
-            } else {
-                WINDOWS_HELPER_error(TEXT("Failed to create main window's menu bar."));
-            }
-            */
-
-            TEXTBOX_initialize(main_window.width, main_window.height, hwnd, &main_window.font_file, &main_window.font_name);
             return 0;
         }
 
         case WM_COMMAND:
             switch (LOWORD(wParam)) {
-                case ID_FILE_OPEN: {
-                    const DWORD size = sizeof(TCHAR) * 32767;
-                    LPTSTR pFile_name = malloc(size);
-                    if (!pFile_name) {
-                        break;
-                    }
-                    memset(pFile_name, 0, size);
-
-                    OPENFILENAME open_file_name = { 0 };
-                    open_file_name.lStructSize = 76;
-                    open_file_name.hwndOwner = hwnd;
-                    open_file_name.lpstrFilter = TEXT("Text Files (.txt)\0*.txt\0All Files\0*.*\0\0");
-                    open_file_name.nFilterIndex = 1;
-                    open_file_name.lpstrFile = pFile_name;
-                    open_file_name.nMaxFile = size;
-                    open_file_name.Flags = OFN_CREATEPROMPT;
-
-                    if (GetOpenFileName(&open_file_name)) {
-                        DWORD create_type = OPEN_EXISTING;
-                        if (!WINDOWS_HELPER_file_exists(open_file_name.lpstrFile)) {
-                            create_type = CREATE_NEW;
+                case ID_MAIN_WINDOW_SDI_FILE_OPEN: {
+                    HANDLE file = WINDOWS_HELPER_file_dialog(hwnd, TRUE);
+                    if (file != INVALID_HANDLE_VALUE) {
+                        size_t file_size = GetFileSize(file, NULL);
+                        BYTE *pBytes = malloc(sizeof(BYTE) * (file_size + sizeof(WCHAR)));
+                        if (!pBytes) {
+                            goto clean_up_open;
                         }
+                        pBytes[0] = '\0';
 
-                        HANDLE file = CreateFile(open_file_name.lpstrFile,
-                                      GENERIC_READ,
-                                      FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                      NULL,
-                                      create_type,
-                                      FILE_ATTRIBUTE_NORMAL,
-                                      NULL);
+                        DWORD bytes_read_number = 0;
+                        if (!ReadFile(file, pBytes, file_size, &bytes_read_number, NULL)) {
+                            WINDOWS_HELPER_error(TEXT("Failed to read file."));
+                            goto clean_up_open;
+                        }
+                        pBytes[bytes_read_number] = '\0';
 
-                        if (file != INVALID_HANDLE_VALUE) {
-                            size_t file_size = GetFileSize(file, NULL);
-                            BYTE *pBytes = malloc(sizeof(BYTE) * (file_size + sizeof(WCHAR)));
-                            if (!pBytes) {
-                                goto clean_up;
-                            }
-                            pBytes[0] = '\0';
-
-                            DWORD bytes_read_number = 0;
-                            if (!ReadFile(file, pBytes, file_size, &bytes_read_number, NULL)) {
-                                WINDOWS_HELPER_error(TEXT("Failed to read file."));
-                                goto clean_up;
-                            }
-                            pBytes[bytes_read_number] = '\0';
-
-                            const BYTE code_page = STRING_UTILITIES_DETECT_ENCODING(pBytes, bytes_read_number);
-                            WIDE_STRING text = { 0 };
-
-                            if (code_page == STRING_UTILITIES_ANSI) {
-                                text = WIDE_STRING_create_a((LPCSTR)pBytes);
-                            } else if (code_page == STRING_UTILITIES_WIDE) {
-                                pBytes[bytes_read_number + 1] = '\0';
-                                text = WIDE_STRING_create_w((LPCWSTR)(pBytes + 2));
-                            } else {
-                                LPWSTR pWide = STRING_UTILITIES_UTF8_to_w((LPCSTR)(pBytes + 3));
-                                text = WIDE_STRING_create_w(pWide);
-
-                                MEMORY_HELPER_free((void **)&pWide);
-                            }
-                            
-                            TEXTBOX_set_text(text);
-
-                        clean_up:
-                            MEMORY_HELPER_free((void **)&pBytes);
-                            CloseHandle(file);
+                        TEXT_FILE text_file = { 0 };
+                        text_file.encoding = STRING_UTILITIES_detect_encoding(pBytes, bytes_read_number);
+                        if (text_file.encoding == STRING_UTILITIES_ANSI) {
+                            text_file.text = WIDE_STRING_create_a((LPCSTR)pBytes);
+                        } else if (text_file.encoding == STRING_UTILITIES_WIDE) {
+                            pBytes[bytes_read_number + 1] = '\0';
+                            text_file.text = WIDE_STRING_create_w((LPCWSTR)(pBytes + 2));
                         } else {
-                            WINDOWS_HELPER_error(TEXT("Failed to open file."));
-                        }
-                    }
+                            LPWSTR pWide = STRING_UTILITIES_UTF8_to_w(
+                                (LPCSTR)(pBytes + (text_file.encoding == STRING_UTILITIES_UTF8_WITH_BOM ? 3 : 0))
+                            );
+                            text_file.text = WIDE_STRING_create_w(pWide);
 
-                    MEMORY_HELPER_free((void **)&pFile_name);
-                    break;
+                            MEMORY_HELPER_free((void **)&pWide);
+                        }
+
+                        TEXTBOX_set_file(main_window.pSelected_textbox, text_file);
+
+                    clean_up_open:
+                        MEMORY_HELPER_free((void **)&pBytes);
+                        CloseHandle(file);
+                    }
+                    return 0;
+                }
+
+                case ID_MAIN_WINDOW_SDI_FILE_SAVE: {
+                    HANDLE file = WINDOWS_HELPER_file_dialog(hwnd, FALSE);
+                    if (file != INVALID_HANDLE_VALUE) {
+                        const BYTE UTF_16_LE_BOM[2] = { 0xFF, 0xFE };
+                        DWORD bytes_written = 0;
+
+                        if (!WriteFile(file, UTF_16_LE_BOM, 2, &bytes_written, NULL)) {
+                            WINDOWS_HELPER_warning(TEXT("Failed to save file."));
+                            goto clean_up_save;
+                        }
+
+                        const LPCWSTR text = main_window.pSelected_textbox->file.text.pWide_string;
+                        if (!WriteFile(file, text, wcslen(text) * sizeof(WCHAR), &bytes_written, NULL)) {
+                            WINDOWS_HELPER_warning(TEXT("Failed to save file."));
+                            goto clean_up_save;
+                        }
+
+                    clean_up_save:
+                        CloseHandle(file);
+                    }
+                    return 0;
                 }
 
                 case ID_FILE_QUIT:
                     SendMessage(hwnd, WM_CLOSE, 0, 0);
-                    break;
+                    return 0;
             }
-            return 0;
+            break;
 
         case WM_IME_COMPOSITION:
-            SendMessage(TEXTBOX_get()->hwnd, uMsg, wParam, lParam);
+            SendMessage(main_window.pSelected_textbox->hwnd, uMsg, wParam, lParam);
             return 0;
 
         case WM_CHAR:
-            SendMessage(TEXTBOX_get()->hwnd, uMsg, wParam, lParam);
+            SendMessage(main_window.pSelected_textbox->hwnd, uMsg, wParam, lParam);
             return 0;
 
         case WM_KEYDOWN:
-            SendMessage(TEXTBOX_get()->hwnd, uMsg, wParam, lParam);
+            SendMessage(main_window.pSelected_textbox->hwnd, uMsg, wParam, lParam);
             return 0;
 
-        case WM_SIZE:
-            main_window.width = LOWORD(lParam);
-            main_window.height = HIWORD(lParam);
+        case WM_SIZE: {
+            main_window.size.x = LOWORD(lParam);
+            main_window.size.y = HIWORD(lParam);
 
-            HWND textbox = TEXTBOX_get()->hwnd;
-            if (textbox) {
-                if (!MoveWindow(textbox,
-                    0, 0,
-                    main_window.width, main_window.height,
-                    FALSE)) {
-                    WINDOWS_HELPER_error(TEXT("Failed to resize."));
-                }
-
-                TEXTBOX_request_redraw();
+            if (!main_window.pSelected_textbox) {
+                break;
             }
+
+            const HWND textbox = main_window.pSelected_textbox->hwnd;
+            if (!textbox) {
+                break;
+            }
+
+            if (!MoveWindow(textbox,
+                            0, 0,
+                            main_window.size.x, main_window.size.y,
+                            FALSE)) {
+                            WINDOWS_HELPER_warning(TEXT("Failed to resize."));
+            }
+
+            TEXTBOX_request_redraw(main_window.pSelected_textbox);
             return 0;
+        }
 
         case WM_CLOSE: {
             WIDE_STRING text = WIDE_STRING_create_w(L"정말로 종료하시겠습니까?"),
                         caption = WIDE_STRING_create_w(L"Are you sure you want to quit?");
             LPCTSTR pText = WIDE_STRING_get_t_string(&text), pCaption = WIDE_STRING_get_t_string(&caption);
 
-            if (MessageBox(hwnd,
-                           pText,
-                           pCaption,
-                           MB_OKCANCEL | MB_ICONQUESTION) == IDOK) {
-                DestroyWindow(hwnd);
+            if (MessageBox(main_window.hwnd,
+                pText,
+                pCaption,
+                MB_OKCANCEL | MB_ICONQUESTION) == IDOK) {
+                DestroyWindow(main_window.hwnd);
             }
 
             WIDE_STRING_destroy(&text);
@@ -192,28 +189,34 @@ LRESULT CALLBACK MAIN_WINDOW_callback(const HWND hwnd, const UINT uMsg, const WP
         }
 
         case WM_DESTROY:
-            TEXTBOX_destory();
+            WIDE_STRING_destroy(&main_window.font_file);
+            WIDE_STRING_destroy(&main_window.font_name);
             PostQuitMessage(0);
             return 0;
+    }
+
+    if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_MULTIPLE_DOCUMENT_INTERFACE) {
+        return DefFrameProc(hwnd, main_window.mdi, uMsg, wParam, lParam);
     }
 
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
 void MAIN_WINDOW_initialize(void) {
-    main_window.width = 0;
-    main_window.height = 0;
+    XY size = { 0 };
+    main_window.size = size;
+
     main_window.font_file = WIDE_STRING_create_w(L"unifont-15.1.05.otf");
     main_window.font_name = WIDE_STRING_create_w(L"Unifont");
 
     ATOM_WRAPPER main_window_class = { 0 };
     WIDE_STRING main_window_class_name = WIDE_STRING_create_w(L"Text Editor"),
                 main_window_title = WIDE_STRING_create_w(L"Text Editor / 문서 편집기");
-    ATOM_WRAPPER_initialize(&main_window_class, &main_window_class_name, 0, MAIN_WINDOW_callback);
+
+    ATOM_WRAPPER_initialize(&main_window_class, &main_window_class_name, 0, MAIN_WINDOW_DefWindowProc);
     
-    LPCTSTR pMain_window_class_name = WIDE_STRING_get_t_string(&main_window_class_name),
-            pMain_window_title = WIDE_STRING_get_t_string(&main_window_title);
-    main_window.hwnd = CreateWindow(pMain_window_class_name,
+    LPCTSTR pMain_window_title = WIDE_STRING_get_t_string(&main_window_title);
+    main_window.hwnd = CreateWindow(main_window_class.class_name_t,
                                     pMain_window_title,
                                     WS_OVERLAPPEDWINDOW,
                                     CW_USEDEFAULT, CW_USEDEFAULT,
@@ -228,15 +231,10 @@ void MAIN_WINDOW_initialize(void) {
 
     WIDE_STRING_destroy(&main_window_class_name);
     WIDE_STRING_destroy(&main_window_title);
-    MEMORY_HELPER_free((void **)&pMain_window_class_name);
     MEMORY_HELPER_free((void **)&pMain_window_title);
+    ATOM_WRAPPER_destroy(&main_window_class);
 }
 
 void MAIN_WINDOW_show(void) {
     ShowWindow(main_window.hwnd, SW_SHOW);
-}
-
-void MAIN_WINDOW_destroy(void) {
-    WIDE_STRING_destroy(&main_window.font_file);
-    WIDE_STRING_destroy(&main_window.font_name);
 }

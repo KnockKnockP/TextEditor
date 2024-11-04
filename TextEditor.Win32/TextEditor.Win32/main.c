@@ -37,6 +37,9 @@ WinMain
 #endif
 
     InitCommonControls();
+    WINDOWS_HELPER_set_interface_type();
+    WINDOWS_HELPER_interface_type = WINDOWS_HELPER_MULTIPLE_DOCUMENT_INTERFACE;
+    //WINDOWS_HELPER_interface_type = WINDOWS_HELPER_SINGLE_DOCUMENT_INTERFACE;
 
     MAIN_WINDOW_initialize();
     MAIN_WINDOW_show();
@@ -46,8 +49,6 @@ WinMain
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-
-    MAIN_WINDOW_destroy();
 
 #ifdef CRT_MAIN
     ExitProcess(0);

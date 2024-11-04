@@ -16,7 +16,12 @@
 #define STRING_UTILITIES_UTF8 3
 #endif
 
-BYTE STRING_UTILITIES_DETECT_ENCODING(const BYTE * const pBytes, const size_t size);
+#ifndef STRING_UTILITIES_UTF8_WITH_BOM
+#define STRING_UTILITIES_UTF8_WITH_BOM 4
+#endif
+
+BYTE STRING_UTILITIES_detect_encoding(const BYTE * const pBytes, const size_t size);
+LPTSTR STRING_UTILITIES_encoding_enum_to_string(const BYTE encoding_enum);
 
 LPTSTR STRING_UTILITIES_w_to_t(LPCWSTR pWide_string);
 LPWSTR STRING_UTILITIES_a_to_w(LPCSTR pANSI_string);
