@@ -46,8 +46,6 @@ WINDOWS_HELPER_GET_FUNCTION_DECLARATION(ImmGetCompositionString);
 WINDOWS_HELPER_GET_FUNCTION_DECLARATION(ImmReleaseContext);
 
 void WINDOWS_HELPER_set_interface_type(void);
-WORD WINDOWS_HELPER_get_main_window_resource(void);
-WORD WINDOWS_HELPER_get_textbox_resource(void);
 
 BOOL WINDOWS_HELPER_file_exists(LPCTSTR file);
 HANDLE WINDOWS_HELPER_file_dialog(const HWND owner, const BOOL is_open);

@@ -1,11 +1,11 @@
+#include <leak_checker.h>
+
 #include <main_window.h>
 #include <resource.h>
 #include <atom_wrapper.h>
 #include <memory_helper.h>
 #include <windows_helper.h>
 #include <string_utilities.h>
-
-#include <stdio.h>
 
 #ifndef MAIN_WINDOW_OPEN
 #define MAIN_WINDOW_OPEN 1
@@ -19,50 +19,55 @@
 #define MAIN_WINDOW_QUIT 3
 #endif
 
-static MAIN_WINDOW main_window = { 0 };
+MAIN_WINDOW main_window = { 0 };
+
+static TEXTBOX *MAIN_WINDOW_create_mdi_child(void) {
+    TEXTBOX *pTextbox = TEXTBOX_create(main_window.hwnd, main_window.size, &main_window.font_file, &main_window.font_name);
+
+    MDICREATESTRUCT mdi_create_struct = { 0 };
+    mdi_create_struct.szClass = pTextbox_registered_class_name;
+    mdi_create_struct.szTitle = pTextbox_registered_class_name;
+    mdi_create_struct.x = CW_USEDEFAULT;
+    mdi_create_struct.y = CW_USEDEFAULT;
+
+    RECT size = { 0 };
+    GetWindowRect(main_window.hwnd, &size);
+    mdi_create_struct.cx = size.right / 2;
+    mdi_create_struct.cy = size.bottom / 2;
+
+    pTextbox->hwnd = (HWND)SendMessage(main_window.mdi, WM_MDICREATE, 0, (LPARAM)(MDICREATESTRUCT *)&mdi_create_struct);
+    return pTextbox;
+}
 
 LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE: {
+            main_window.hwnd = hwnd;
+
+            const HMENU menu = LoadMenu(NULL, MAKEINTRESOURCE(IDR_MAIN_WINDOW_MENU));
+            if (menu) {
+                SetMenu(hwnd, menu);
+            } else {
+                WINDOWS_HELPER_error(TEXT("Failed to load main window's menu bar."));
+            }
+
             if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_MULTIPLE_DOCUMENT_INTERFACE) {
                 CLIENTCREATESTRUCT client_create_struct = { 0 };
-                client_create_struct.hWindowMenu = NULL;
-                client_create_struct.idFirstChild = IDR_MAIN_WINDOW_MENU_SDI;
                 main_window.mdi = CreateWindow(TEXT("MDICLIENT"), NULL,
-                                               WS_CHILD | WS_CLIPCHILDREN | WS_VISIBLE,
+                                               WS_CHILD | WS_VISIBLE,
                                                0, 0, main_window.size.x, main_window.size.y,
                                                hwnd, NULL, NULL, &client_create_struct);
 
-                TEXTBOX *pTextbox = TEXTBOX_create(hwnd, main_window.size, &main_window.font_file, &main_window.font_name);
-
-                MDICREATESTRUCT mdi_create_struct = { 0 };
-                mdi_create_struct.szClass = pTextbox->registered_class.class_name_t;
-                mdi_create_struct.szTitle = pTextbox->registered_class.class_name_t;
-                mdi_create_struct.x = CW_USEDEFAULT;
-                mdi_create_struct.y = CW_USEDEFAULT;
-
-                RECT size = { 0 };
-                GetWindowRect(hwnd, &size);
-                mdi_create_struct.cx = size.right / 2;
-                mdi_create_struct.cy = size.bottom / 2;
-
-                pTextbox->hwnd = (HWND)SendMessage(main_window.mdi, WM_MDICREATE, 0, (LPARAM)(MDICREATESTRUCT *)&mdi_create_struct);
+                MAIN_WINDOW_create_mdi_child();
             } else if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_SINGLE_DOCUMENT_INTERFACE) {
-                const HMENU menu = LoadMenu(NULL, MAKEINTRESOURCE(IDR_MAIN_WINDOW_MENU_SDI));
-                if (menu) {
-                    SetMenu(hwnd, menu);
-                } else {
-                    WINDOWS_HELPER_error(TEXT("Failed to load main window's menu bar."));
-                }
-
-                main_window.pSelected_textbox = TEXTBOX_create(hwnd, main_window.size, &main_window.font_file, &main_window.font_name);
+                main_window.pSdi = TEXTBOX_create(hwnd, main_window.size, &main_window.font_file, &main_window.font_name);
             }
             return 0;
         }
 
         case WM_COMMAND:
             switch (LOWORD(wParam)) {
-                case ID_MAIN_WINDOW_SDI_FILE_OPEN: {
+                case ID_MAIN_WINDOW_MENU_FILE_OPEN: {
                     HANDLE file = WINDOWS_HELPER_file_dialog(hwnd, TRUE);
                     if (file != INVALID_HANDLE_VALUE) {
                         size_t file_size = GetFileSize(file, NULL);
@@ -95,7 +100,11 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                             MEMORY_HELPER_free((void **)&pWide);
                         }
 
-                        TEXTBOX_set_file(main_window.pSelected_textbox, text_file);
+                        TEXTBOX *pTextbox = main_window.pSdi;
+                        if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_MULTIPLE_DOCUMENT_INTERFACE) {
+                            pTextbox = MAIN_WINDOW_create_mdi_child();
+                        }
+                        TEXTBOX_set_file(pTextbox, text_file);
 
                     clean_up_open:
                         MEMORY_HELPER_free((void **)&pBytes);
@@ -104,7 +113,12 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                     return 0;
                 }
 
-                case ID_MAIN_WINDOW_SDI_FILE_SAVE: {
+                case ID_MAIN_WINDOW_MENU_FILE_SAVE: {
+                    TEXTBOX *pTextbox = main_window.pSdi;
+                    if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_MULTIPLE_DOCUMENT_INTERFACE) {
+                        pTextbox = TEXTBOX_find_by_HWND((HWND)SendMessage(main_window.mdi, WM_MDIGETACTIVE, 0, 0));
+                    }
+
                     HANDLE file = WINDOWS_HELPER_file_dialog(hwnd, FALSE);
                     if (file != INVALID_HANDLE_VALUE) {
                         const BYTE UTF_16_LE_BOM[2] = { 0xFF, 0xFE };
@@ -115,7 +129,7 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                             goto clean_up_save;
                         }
 
-                        const LPCWSTR text = main_window.pSelected_textbox->file.text.pWide_string;
+                        const LPCWSTR text = pTextbox->file.text.pWide_string;
                         if (!WriteFile(file, text, wcslen(text) * sizeof(WCHAR), &bytes_written, NULL)) {
                             WINDOWS_HELPER_warning(TEXT("Failed to save file."));
                             goto clean_up_save;
@@ -127,33 +141,33 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                     return 0;
                 }
 
-                case ID_FILE_QUIT:
+                case ID_MAIN_WINDOW_MENU_FILE_QUIT:
                     SendMessage(hwnd, WM_CLOSE, 0, 0);
                     return 0;
             }
             break;
 
         case WM_IME_COMPOSITION:
-            SendMessage(main_window.pSelected_textbox->hwnd, uMsg, wParam, lParam);
+            SendMessage(main_window.pSdi->hwnd, uMsg, wParam, lParam);
             return 0;
 
         case WM_CHAR:
-            SendMessage(main_window.pSelected_textbox->hwnd, uMsg, wParam, lParam);
+            SendMessage(main_window.pSdi->hwnd, uMsg, wParam, lParam);
             return 0;
 
         case WM_KEYDOWN:
-            SendMessage(main_window.pSelected_textbox->hwnd, uMsg, wParam, lParam);
+            SendMessage(main_window.pSdi->hwnd, uMsg, wParam, lParam);
             return 0;
 
         case WM_SIZE: {
             main_window.size.x = LOWORD(lParam);
             main_window.size.y = HIWORD(lParam);
 
-            if (!main_window.pSelected_textbox) {
+            if (!main_window.pSdi) {
                 break;
             }
 
-            const HWND textbox = main_window.pSelected_textbox->hwnd;
+            const HWND textbox = main_window.pSdi->hwnd;
             if (!textbox) {
                 break;
             }
@@ -165,7 +179,7 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                             WINDOWS_HELPER_warning(TEXT("Failed to resize."));
             }
 
-            TEXTBOX_request_redraw(main_window.pSelected_textbox);
+            TEXTBOX_request_redraw(main_window.pSdi);
             return 0;
         }
 
@@ -206,6 +220,7 @@ void MAIN_WINDOW_initialize(void) {
     XY size = { 0 };
     main_window.size = size;
 
+    main_window.pSdi = NULL;
     main_window.font_file = WIDE_STRING_create_w(L"unifont-15.1.05.otf");
     main_window.font_name = WIDE_STRING_create_w(L"Unifont");
 
@@ -215,8 +230,9 @@ void MAIN_WINDOW_initialize(void) {
 
     ATOM_WRAPPER_initialize(&main_window_class, &main_window_class_name, 0, MAIN_WINDOW_DefWindowProc);
     
-    LPCTSTR pMain_window_title = WIDE_STRING_get_t_string(&main_window_title);
-    main_window.hwnd = CreateWindow(main_window_class.class_name_t,
+    LPCTSTR pMain_window_class_name = WIDE_STRING_get_t_string(&main_window_class_name),
+            pMain_window_title = WIDE_STRING_get_t_string(&main_window_title);
+    main_window.hwnd = CreateWindow(pMain_window_class_name,
                                     pMain_window_title,
                                     WS_OVERLAPPEDWINDOW,
                                     CW_USEDEFAULT, CW_USEDEFAULT,
@@ -231,8 +247,8 @@ void MAIN_WINDOW_initialize(void) {
 
     WIDE_STRING_destroy(&main_window_class_name);
     WIDE_STRING_destroy(&main_window_title);
+    MEMORY_HELPER_free((void **)&pMain_window_class_name);
     MEMORY_HELPER_free((void **)&pMain_window_title);
-    ATOM_WRAPPER_destroy(&main_window_class);
 }
 
 void MAIN_WINDOW_show(void) {

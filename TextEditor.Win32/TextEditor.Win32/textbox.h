@@ -23,11 +23,11 @@ typedef struct _FONT {
 } FONT;
 
 typedef struct _TEXTBOX {
-    ATOM_WRAPPER registered_class;
     HWND hwnd, status_bar_hwnd;
-    XY size, caret;
+    XY size, caret, caret_pixels;
     TEXT_FILE file;
     FONT font;
+    BOOL focus;
 
     WIDE_STRING ime;
 #ifndef UNICODE
@@ -38,11 +38,14 @@ typedef struct _TEXTBOX {
 typedef TEXTBOX* PTEXTBOX;
 VECTOR_DECLARE_ALL(PTEXTBOX);
 
+extern LPCTSTR pTextbox_registered_class_name;
+
 TEXTBOX *TEXTBOX_create(const HWND parent,
                         const XY size,
                         WIDE_STRING *pFont_file,
                         WIDE_STRING *pFont_name);
 void TEXTBOX_set_file(TEXTBOX *pTextbox, const TEXT_FILE text_file);
+TEXTBOX *TEXTBOX_find_by_HWND(const HWND hwnd);
 void TEXTBOX_request_redraw(const TEXTBOX *pTextbox);
 void TEXTBOX_set_caret_position(TEXTBOX *pTextbox, int x, int y);
 

@@ -1,3 +1,5 @@
+#include <leak_checker.h>
+
 #include <memory_helper.h>
 #include <stdlib.h>
 #include <stddef.h>

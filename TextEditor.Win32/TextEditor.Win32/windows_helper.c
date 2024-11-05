@@ -1,3 +1,5 @@
+#include <leak_checker.h>
+
 #include <windows_helper.h>
 #include <resource.h>
 #include <memory_helper.h>
@@ -50,24 +52,6 @@ void WINDOWS_HELPER_set_interface_type(void) {
     } else if ((major == 5 && minor >= 1) || major >= 6) {
         WINDOWS_HELPER_interface_type = WINDOWS_HELPER_TABBED_DOCUMENT_INTERFACE;
     }
-}
-
-WORD WINDOWS_HELPER_get_main_window_resource(void) {
-    if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_MULTIPLE_DOCUMENT_INTERFACE) {
-        return IDR_MAIN_WINDOW_MENU_MDI;
-    } else if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_SINGLE_DOCUMENT_INTERFACE) {
-        return IDR_MAIN_WINDOW_MENU_SDI;
-    }
-    
-    return 0;
-}
-
-WORD WINDOWS_HELPER_get_textbox_resource(void) {
-    if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_MULTIPLE_DOCUMENT_INTERFACE) {
-        return IDR_TEXTBOX_MENU_MDI;
-    }
-
-    return 0;
 }
 
 BOOL WINDOWS_HELPER_file_exists(LPCTSTR file) {

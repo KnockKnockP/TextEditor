@@ -1,12 +1,18 @@
+#include <leak_checker.h>
+
 #include <textbox.h>
 #include <stdio.h>
 #include <commctrl.h>
 #include <resource.h>
+#include <main_window.h>
 #include <atom_wrapper.h>
 #include <memory_helper.h>
 #include <windows_helper.h>
 
 VECTOR_IMPLEMENTATION(PTEXTBOX)
+
+static ATOM_WRAPPER registered_class = { 0 };
+LPCTSTR pTextbox_registered_class_name = NULL;
 
 static TEXTBOX *pBeing_created = NULL;
 static size_t textboxes_count = 0;
@@ -16,14 +22,14 @@ void TEXT_FILE_destroy(TEXT_FILE *pText_file) {
     WIDE_STRING_destroy(&pText_file->text);
 }
 
-void TEXTBOX_CreateCaret(const TEXTBOX *pTextbox) {
+static void TEXTBOX_CreateCaret(const TEXTBOX *pTextbox) {
     if (!CreateCaret(pTextbox->hwnd, NULL, 2, pTextbox->font.size.y)) {
         WINDOWS_HELPER_warning(TEXT("Failed to create main window's textbox's caret."));
     }
     ShowCaret(pTextbox->hwnd);
 }
 
-LPCTSTR TEXTBOX_get_encoding_string(const BYTE encoding_enum) {
+static LPCTSTR TEXTBOX_get_encoding_string(const BYTE encoding_enum) {
     WIDE_STRING encoding = WIDE_STRING_create_w(L"Encoding: ");
     WIDE_STRING_append_string(&encoding, STRING_UTILITIES_encoding_enum_to_string(encoding_enum));
     
@@ -32,38 +38,47 @@ LPCTSTR TEXTBOX_get_encoding_string(const BYTE encoding_enum) {
     return encoding_string;
 }
 
-TEXTBOX *TEXTBOX_find_by_HWND(const HWND hwnd) {
-    for (size_t i = 0; i < textboxes.size; ++i) {
-        if (textboxes.pArray[i] && textboxes.pArray[i]->hwnd == hwnd) {
-            return textboxes.pArray[i];
-        }
+static void TEXTBOX_set_caret_position_in_pixels(TEXTBOX *pTextbox, const HDC hdc) {
+    size_t size = sizeof(WCHAR) * (pTextbox->caret.x + 1);
+
+    size_t ime_characters = 0, ime_size = 0;
+    if (pTextbox->ime.pWide_string) {
+        ime_characters = wcslen(pTextbox->ime.pWide_string);
+        ime_size = sizeof(WCHAR) * ime_characters;
     }
 
-    return NULL;
-}
-
-static void stoi_4(size_t value, char string[5]) {
-    if (value >= 10000) {
-        value = 9999;
+    LPWSTR caret_line = malloc(size + ime_size);
+    if (!caret_line) {
+        return;
     }
-    sprintf(string, "%04u", value);
+
+    memcpy(caret_line, pTextbox->file.text.individual_lines.pArray[pTextbox->caret.y], size - sizeof(WCHAR));
+    size_t ending = pTextbox->caret.x;
+
+    if (pTextbox->ime.pWide_string) {
+        memcpy(caret_line + pTextbox->caret.x, pTextbox->ime.pWide_string, ime_size);
+        ending += ime_characters;
+    }
+
+    caret_line[ending] = L'\0';
+
+    LPTSTR caret_line_t = STRING_UTILITIES_w_to_t(caret_line);
+
+    RECT text_size = { 0 };
+    DrawText(hdc, caret_line_t, -1, &text_size, DT_CALCRECT | DT_EXPANDTABS);
+
+    pTextbox->caret_pixels.x = text_size.right;
+    pTextbox->caret_pixels.y = pTextbox->font.size.y * pTextbox->caret.y;
+
+    MEMORY_HELPER_free((void **)&caret_line);
+    MEMORY_HELPER_free((void **)&caret_line_t);
 }
 
-LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
+static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE: {
             TEXTBOX *pTextbox = pBeing_created;
             pTextbox->hwnd = hwnd;
-
-            const WORD resource = WINDOWS_HELPER_get_textbox_resource();
-            if (resource) {
-                const HMENU menu = LoadMenu(NULL, MAKEINTRESOURCE(resource));
-                if (menu) {
-                    SetMenu(hwnd, menu);
-                } else {
-                    WINDOWS_HELPER_error(TEXT("Failed to load main window's textbox's menu bar."));
-                }
-            }
 
             if (AddFontResourceEx_saved) {
                 pTextbox->font.size.x = 16;
@@ -85,13 +100,11 @@ LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, const W
                                                  CLIP_DEFAULT_PRECIS,
                                                  DEFAULT_QUALITY,
                                                  FF_DONTCARE,
-                    pTextbox->font.pFont_name_t);
+                                                 pTextbox->font.pFont_name_t);
                 if (!pTextbox->font.font) {
                     WINDOWS_HELPER_warning(TEXT("Failed to create main window's textbox's font."));
                 }
             }
-
-            TEXTBOX_CreateCaret(pTextbox);
 
             LPCTSTR encoding_string = TEXTBOX_get_encoding_string(pTextbox->file.encoding);
             pTextbox->status_bar_hwnd = CreateStatusWindow(WS_CHILD | WS_VISIBLE, encoding_string, hwnd, IDR_TEXTBOX_STATUS_BAR);
@@ -99,6 +112,18 @@ LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, const W
             if (!pTextbox->status_bar_hwnd) {
                 WINDOWS_HELPER_warning(TEXT("Failed to create main window's textbox's status bar."));
             }
+            return 0;
+        }
+
+        case WM_SETFOCUS: {
+            TEXTBOX *pTextbox = TEXTBOX_find_by_HWND(hwnd);
+            if (!pTextbox) {
+                break;
+            }
+
+            pTextbox->focus = TRUE;
+
+            TEXTBOX_CreateCaret(pTextbox);
             return 0;
         }
 
@@ -111,7 +136,7 @@ LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, const W
             pTextbox->size.x = LOWORD(lParam);
             pTextbox->size.y = HIWORD(lParam);
             SendMessage(pTextbox->status_bar_hwnd, WM_SIZE, wParam, lParam);
-            break;
+            return 0;
         }
 
         case WM_IME_COMPOSITION: {
@@ -288,6 +313,7 @@ LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, const W
             }
             DeleteObject(brush);
 
+            TEXTBOX_set_caret_position_in_pixels(pTextbox, hdc);
             for (size_t i = 0; i < pTextbox->file.text.individual_lines.size; ++i) {
                 WIDE_STRING pLine = { 0 };
 
@@ -316,40 +342,6 @@ LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, const W
                 MEMORY_HELPER_free((void **)&pT_line);
 
                 paint_struct.rcPaint.top += pTextbox->font.size.y;
-
-                if ((int)i == pTextbox->caret.y) {
-                    size_t size = sizeof(WCHAR) * (pTextbox->caret.x + 1);
-
-                    size_t ime_characters = 0, ime_size = 0;
-                    if (is_IME_line) {
-                        ime_characters = wcslen(pTextbox->ime.pWide_string);
-                        ime_size = sizeof(WCHAR) * ime_characters;
-                    }
-
-                    LPWSTR caret_line = malloc(size + ime_size);
-                    if (!caret_line) {
-                        continue;
-                    }
-
-                    memcpy(caret_line, pTextbox->file.text.individual_lines.pArray[i], size - sizeof(WCHAR));
-                    size_t ending = pTextbox->caret.x;
-
-                    if (is_IME_line) {
-                        memcpy(caret_line + pTextbox->caret.x, pTextbox->ime.pWide_string, ime_size);
-                        ending += ime_characters;
-                    }
-
-                    caret_line[ending] = L'\0';
-
-                    LPTSTR caret_line_t = STRING_UTILITIES_w_to_t(caret_line);
-
-                    RECT text_size = { 0 };
-                    DrawText(hdc, caret_line_t, -1, &text_size, DT_CALCRECT | DT_EXPANDTABS);
-                    SetCaretPos(text_size.right, pTextbox->font.size.y * pTextbox->caret.y);
-
-                    MEMORY_HELPER_free((void **)&caret_line);
-                    MEMORY_HELPER_free((void **)&caret_line_t);
-                }
                 WIDE_STRING_destroy(&pLine);
 
                 if (is_IME_line) {
@@ -357,7 +349,23 @@ LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, const W
                 }
             }
 
+            if (pTextbox->focus) {
+                SetCaretPos(pTextbox->caret_pixels.x, pTextbox->caret_pixels.y);
+            }
             EndPaint(hwnd, &paint_struct);
+            return 0;
+        }
+
+        case WM_KILLFOCUS: {
+            TEXTBOX* pTextbox = TEXTBOX_find_by_HWND(hwnd);
+            if (!pTextbox) {
+                break;
+            }
+
+            pTextbox->focus = FALSE;
+
+            HideCaret(hwnd);
+            DestroyCaret();
             return 0;
         }
 
@@ -369,17 +377,16 @@ LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, const W
 
             TEXT_FILE_destroy(&pTextbox->file);
             WIDE_STRING_destroy(&pTextbox->ime);
-            ATOM_WRAPPER_destroy(&pTextbox->registered_class);
 
             if (RemoveFontResourceEx_saved) {
-                DeleteObject(pTextbox);
+                DeleteObject(pTextbox->font.font);
                 RemoveFontResourceEx_saved(pTextbox->font.pFont_name_t, FR_PRIVATE, 0);
                 MEMORY_HELPER_free((void **)&pTextbox->font.pFont_file_t);
                 MEMORY_HELPER_free((void **)&pTextbox->font.pFont_name_t);
             }
 
             HideCaret(hwnd);
-            //DestroyCaret();
+            DestroyCaret();
 
             if (textboxes.pArray) {
                 VECTOR_FIND_AND_REPLACE_PTEXTBOX(&textboxes, pTextbox, NULL);
@@ -387,6 +394,7 @@ LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, const W
                 MEMORY_HELPER_free((void **)&pTextbox);
 
                 if (!textboxes_count) {
+                    MEMORY_HELPER_free((void **)&pTextbox_registered_class_name);
                     VECTOR_DESTROY_PTEXTBOX(&textboxes);
                 }
             }
@@ -422,6 +430,7 @@ TEXTBOX *TEXTBOX_create(const HWND parent,
 
     const XY caret_position = { 0 };
     pTextbox->caret = caret_position;
+    pTextbox->caret_pixels = caret_position;
 
     TEXT_FILE text_file = { 0 };
     text_file.text = WIDE_STRING_create_empty();
@@ -441,23 +450,25 @@ TEXTBOX *TEXTBOX_create(const HWND parent,
     TEXTBOX_reset_multibyte_buffer(pTextbox);
 #endif
 
-    ATOM_WRAPPER textbox_class = { 0 };
-    pTextbox->registered_class = textbox_class;
-    WIDE_STRING textbox_class_name = WIDE_STRING_create_w(L"Text Box ");
-    char number[5] = { 0 };
-    stoi_4(textboxes_count, number);
-    WIDE_STRING_append_string_a(&textbox_class_name, number);
-    ATOM_WRAPPER_initialize(&pTextbox->registered_class, &textbox_class_name, CS_HREDRAW | CS_VREDRAW, TEXTBOX_DefWindowProc);
+    if (!registered_class.atom) {
+        WIDE_STRING textbox_class_name = WIDE_STRING_create_w(L"Text Box");
+        pTextbox_registered_class_name = WIDE_STRING_get_t_string(&textbox_class_name);
+        ATOM_WRAPPER_initialize(&registered_class, &textbox_class_name, CS_HREDRAW | CS_VREDRAW, TEXTBOX_DefWindowProc);
+        WIDE_STRING_destroy(&textbox_class_name);
+    }
 
     pBeing_created = pTextbox;
-    pTextbox->hwnd = CreateWindow(pTextbox->registered_class.class_name_t,
-                                  NULL,
-                                  WS_CHILD | WS_VISIBLE,
-                                  0, 0,
-                                  pTextbox->size.x, pTextbox->size.y,
-                                  parent, NULL, NULL, NULL);
-    if (!pTextbox->hwnd) {
-        WINDOWS_HELPER_error(TEXT("Failed to create main window's text box."));
+
+    if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_SINGLE_DOCUMENT_INTERFACE) {
+        pTextbox->hwnd = CreateWindow(pTextbox_registered_class_name,
+                                      NULL,
+                                      WS_CHILD | WS_VISIBLE,
+                                      0, 0,
+                                      pTextbox->size.x, pTextbox->size.y,
+                                      parent, NULL, NULL, NULL);
+        if (!pTextbox->hwnd) {
+            WINDOWS_HELPER_error(TEXT("Failed to create main window's text box."));
+        }
     }
 
     if (textboxes.pArray == NULL) {
@@ -468,6 +479,16 @@ TEXTBOX *TEXTBOX_create(const HWND parent,
     return pTextbox;
 }
 
+TEXTBOX *TEXTBOX_find_by_HWND(const HWND hwnd) {
+    for (size_t i = 0; i < textboxes.size; ++i) {
+        if (textboxes.pArray[i] && textboxes.pArray[i]->hwnd == hwnd) {
+            return textboxes.pArray[i];
+        }
+    }
+
+    return NULL;
+}
+
 void TEXTBOX_set_file(TEXTBOX *pTextbox, const TEXT_FILE text_file) {
     TEXT_FILE_destroy(&pTextbox->file);
     pTextbox->file = text_file;
@@ -476,13 +497,6 @@ void TEXTBOX_set_file(TEXTBOX *pTextbox, const TEXT_FILE text_file) {
     LPCTSTR encoding_string = TEXTBOX_get_encoding_string(pTextbox->file.encoding);
     SendMessage(pTextbox->status_bar_hwnd, SB_SETTEXT, wParam, (LPARAM)encoding_string);
     MEMORY_HELPER_free((void **)&encoding_string);
-
-    /*
-    //For some reason, I have to completely reset the caret.
-    DestroyCaret();
-    TEXTBOX_CreateCaret(pTextbox);
-    TEXTBOX_set_caret_position(pTextbox, 0, 0);
-    */
 
     TEXTBOX_request_redraw(pTextbox);
 }

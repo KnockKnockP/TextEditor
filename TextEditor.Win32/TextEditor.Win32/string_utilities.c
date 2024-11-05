@@ -1,3 +1,5 @@
+#include <leak_checker.h>
+
 #include <string_utilities.h>
 #include <memory_helper.h>
 #include <windows_helper.h>
