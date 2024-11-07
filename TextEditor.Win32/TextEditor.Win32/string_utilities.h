@@ -4,24 +4,16 @@
 #include <vector.h>
 #include <Windows.h>
 
-#ifndef STRING_UTILITIES_ANSI
-#define STRING_UTILITIES_ANSI 1
-#endif
+typedef enum _STRING_UTILITIES_ENCODING {
+    STRING_UTILITIES_ENCODING_NONE = 0,
+    ANSI = 1,
+    WIDE = 2, //UTF-16 LE with BOM
+    UTF8 = 3,
+    UTF8_WITH_BOM = 4
+} STRING_UTILITIES_ENCODING;
 
-#ifndef STRING_UTILITIES_WIDE
-#define STRING_UTILITIES_WIDE 2
-#endif
-
-#ifndef STRING_UTILITIES_UTF8
-#define STRING_UTILITIES_UTF8 3
-#endif
-
-#ifndef STRING_UTILITIES_UTF8_WITH_BOM
-#define STRING_UTILITIES_UTF8_WITH_BOM 4
-#endif
-
-BYTE STRING_UTILITIES_detect_encoding(const BYTE * const pBytes, const size_t size);
-LPTSTR STRING_UTILITIES_encoding_enum_to_string(const BYTE encoding_enum);
+int STRING_UTILITIES_detect_encoding(const BYTE * const pBytes, const size_t size);
+LPTSTR STRING_UTILITIES_encoding_enum_to_string(const int encoding_enum);
 
 LPTSTR STRING_UTILITIES_w_to_t(LPCWSTR pWide_string);
 LPWSTR STRING_UTILITIES_a_to_w(LPCSTR pANSI_string);

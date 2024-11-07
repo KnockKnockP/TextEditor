@@ -39,27 +39,63 @@ static TEXTBOX *MAIN_WINDOW_create_mdi_child(void) {
     return pTextbox;
 }
 
+LRESULT CALLBACK MAIN_WINDOW_MDI_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
+    switch (uMsg) {
+        case WM_ERASEBKGND:
+            if (!WINDOWS_HELPER_is_aero) {
+                break;
+            }
+
+            COLORREF background = RGB(0, 0, 0);
+            if (WINDOWS_HELPER_style == AERO_7) {
+                background = WINDOWS_HELPER_TRANSPARENT_RGB;
+            }
+
+            const HDC hdc = (HDC)wParam;
+            RECT rect = { 0 };
+            GetClientRect(hwnd, &rect);
+
+            const HBRUSH brush = CreateSolidBrush(background);
+            FillRect(hdc, &rect, brush);
+            DeleteObject(brush);
+            return TRUE;
+    }
+
+    return CallWindowProcA((WNDPROC)main_window.mdi_callback, hwnd, uMsg, wParam, lParam);
+}
+
 LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE: {
             main_window.hwnd = hwnd;
 
-            const HMENU menu = LoadMenu(NULL, MAKEINTRESOURCE(IDR_MAIN_WINDOW_MENU));
-            if (menu) {
-                SetMenu(hwnd, menu);
-            } else {
-                WINDOWS_HELPER_error(TEXT("Failed to load main window's menu bar."));
+            if (WINDOWS_HELPER_style == AERO_VISTA && DwmEnableBlurBehindWindow_saved) {
+                DWM_BLURBEHIND dwm = { 0 };
+                dwm.dwFlags = DWM_BB_ENABLE;
+                dwm.fEnable = TRUE;
+
+                DwmEnableBlurBehindWindow_saved(hwnd, &dwm);
+            } else if (WINDOWS_HELPER_style == AERO_7 && DwmExtendFrameIntoClientArea_saved && SetLayeredWindowAttributes_saved) {
+                MARGINS margins = { 0 };
+                margins.cxLeftWidth = -1;
+                margins.cxRightWidth = -1;
+                margins.cyTopHeight = -1;
+                margins.cyBottomHeight = -1;
+                DwmExtendFrameIntoClientArea_saved(hwnd, &margins);
+
+                SetLayeredWindowAttributes_saved(hwnd, WINDOWS_HELPER_TRANSPARENT_RGB, 0, LWA_COLORKEY);
             }
 
-            if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_MULTIPLE_DOCUMENT_INTERFACE) {
+            if (WINDOWS_HELPER_document_type == MDI) {
                 CLIENTCREATESTRUCT client_create_struct = { 0 };
                 main_window.mdi = CreateWindow(TEXT("MDICLIENT"), NULL,
-                                               WS_CHILD | WS_VISIBLE,
+                                               WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
                                                0, 0, main_window.size.x, main_window.size.y,
                                                hwnd, NULL, NULL, &client_create_struct);
 
+                main_window.mdi_callback = SetWindowLongPtr(main_window.mdi, GWLP_WNDPROC, (LONG)MAIN_WINDOW_MDI_DefWindowProc);
                 MAIN_WINDOW_create_mdi_child();
-            } else if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_SINGLE_DOCUMENT_INTERFACE) {
+            } else if (WINDOWS_HELPER_document_type == SDI) {
                 main_window.pSdi = TEXTBOX_create(hwnd, main_window.size, &main_window.font_file, &main_window.font_name);
             }
             return 0;
@@ -86,14 +122,14 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
 
                         TEXT_FILE text_file = { 0 };
                         text_file.encoding = STRING_UTILITIES_detect_encoding(pBytes, bytes_read_number);
-                        if (text_file.encoding == STRING_UTILITIES_ANSI) {
+                        if (text_file.encoding == ANSI) {
                             text_file.text = WIDE_STRING_create_a((LPCSTR)pBytes);
-                        } else if (text_file.encoding == STRING_UTILITIES_WIDE) {
+                        } else if (text_file.encoding == WIDE) {
                             pBytes[bytes_read_number + 1] = '\0';
                             text_file.text = WIDE_STRING_create_w((LPCWSTR)(pBytes + 2));
                         } else {
                             LPWSTR pWide = STRING_UTILITIES_UTF8_to_w(
-                                (LPCSTR)(pBytes + (text_file.encoding == STRING_UTILITIES_UTF8_WITH_BOM ? 3 : 0))
+                                (LPCSTR)(pBytes + (text_file.encoding == UTF8_WITH_BOM ? 3 : 0))
                             );
                             text_file.text = WIDE_STRING_create_w(pWide);
 
@@ -101,7 +137,7 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                         }
 
                         TEXTBOX *pTextbox = main_window.pSdi;
-                        if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_MULTIPLE_DOCUMENT_INTERFACE) {
+                        if (WINDOWS_HELPER_document_type == MDI) {
                             pTextbox = MAIN_WINDOW_create_mdi_child();
                         }
                         TEXTBOX_set_file(pTextbox, text_file);
@@ -115,7 +151,7 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
 
                 case ID_MAIN_WINDOW_MENU_FILE_SAVE: {
                     TEXTBOX *pTextbox = main_window.pSdi;
-                    if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_MULTIPLE_DOCUMENT_INTERFACE) {
+                    if (WINDOWS_HELPER_document_type == MDI) {
                         pTextbox = TEXTBOX_find_by_HWND((HWND)SendMessage(main_window.mdi, WM_MDIGETACTIVE, 0, 0));
                     }
 
@@ -209,7 +245,7 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
             return 0;
     }
 
-    if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_MULTIPLE_DOCUMENT_INTERFACE) {
+    if (WINDOWS_HELPER_document_type == MDI) {
         return DefFrameProc(hwnd, main_window.mdi, uMsg, wParam, lParam);
     }
 
@@ -217,6 +253,8 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
 }
 
 void MAIN_WINDOW_initialize(void) {
+    main_window.mdi_callback = (LONG_PTR)NULL;
+
     XY size = { 0 };
     main_window.size = size;
 
@@ -232,15 +270,31 @@ void MAIN_WINDOW_initialize(void) {
     
     LPCTSTR pMain_window_class_name = WIDE_STRING_get_t_string(&main_window_class_name),
             pMain_window_title = WIDE_STRING_get_t_string(&main_window_title);
-    main_window.hwnd = CreateWindow(pMain_window_class_name,
-                                    pMain_window_title,
-                                    WS_OVERLAPPEDWINDOW,
-                                    CW_USEDEFAULT, CW_USEDEFAULT,
-                                    CW_USEDEFAULT, CW_USEDEFAULT,
-                                    NULL,
-                                    NULL,
-                                    NULL,
-                                    NULL);
+
+    const HMENU menu = LoadMenu(NULL, MAKEINTRESOURCE(IDR_MAIN_WINDOW_MENU));
+    if (WINDOWS_HELPER_style == AERO_7) {
+        main_window.hwnd = CreateWindowEx(WS_EX_LAYERED,
+                                          pMain_window_class_name,
+                                          pMain_window_title,
+                                          WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                                          CW_USEDEFAULT, CW_USEDEFAULT,
+                                          CW_USEDEFAULT, CW_USEDEFAULT,
+                                          NULL,
+                                          menu,
+                                          NULL,
+                                          NULL);
+    } else {
+        main_window.hwnd = CreateWindow(pMain_window_class_name,
+                                        pMain_window_title,
+                                        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                                        CW_USEDEFAULT, CW_USEDEFAULT,
+                                        CW_USEDEFAULT, CW_USEDEFAULT,
+                                        NULL,
+                                        menu,
+                                        NULL,
+                                        NULL);
+    }
+    
     if (!main_window.hwnd) {
         WINDOWS_HELPER_error(TEXT("Failed to create main window."));
     }
@@ -249,8 +303,4 @@ void MAIN_WINDOW_initialize(void) {
     WIDE_STRING_destroy(&main_window_title);
     MEMORY_HELPER_free((void **)&pMain_window_class_name);
     MEMORY_HELPER_free((void **)&pMain_window_title);
-}
-
-void MAIN_WINDOW_show(void) {
-    ShowWindow(main_window.hwnd, SW_SHOW);
 }

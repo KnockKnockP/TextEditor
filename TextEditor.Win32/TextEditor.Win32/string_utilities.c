@@ -41,13 +41,13 @@ static BOOL STRING_UTILITIES_CHECK_UTF8_CLUSTER_4(const BYTE * const pBytes, con
            STRING_UTILITIES_CHECK_UTF8_CLUSTER_FOLLOW_UPS(pBytes, i + 3);
 }
 
-BYTE STRING_UTILITIES_detect_encoding(const BYTE * const pBytes, const size_t size) {
-    BYTE code_page = STRING_UTILITIES_UTF8;
+int STRING_UTILITIES_detect_encoding(const BYTE * const pBytes, const size_t size) {
+    int code_page = UTF8;
     if (size >= 2 && pBytes[0] == 0xFF && pBytes[1] == 0xFE) {
         //WIDE means UTF-16 LE with BOM for now.
-        code_page = STRING_UTILITIES_WIDE;
+        code_page = WIDE;
     } else if (size >= 3 && pBytes[0] == 0xEF && pBytes[1] == 0xBB && pBytes[2] == 0xBF) {
-        code_page = STRING_UTILITIES_UTF8_WITH_BOM;
+        code_page = UTF8_WITH_BOM;
     } else {
         size_t i = 0;
         while (pBytes[i]) {
@@ -61,7 +61,7 @@ BYTE STRING_UTILITIES_detect_encoding(const BYTE * const pBytes, const size_t si
             } else if (STRING_UTILITIES_CHECK_UTF8_CLUSTER_4(pBytes, size, i)) {
                 i += 4;
             } else {
-                code_page = STRING_UTILITIES_ANSI;
+                code_page = ANSI;
                 break;
             }
         }
@@ -69,20 +69,20 @@ BYTE STRING_UTILITIES_detect_encoding(const BYTE * const pBytes, const size_t si
     return code_page;
 }
 
-LPTSTR STRING_UTILITIES_encoding_enum_to_string(const BYTE encoding_enum) {
-    if (encoding_enum == STRING_UTILITIES_ANSI) {
+LPTSTR STRING_UTILITIES_encoding_enum_to_string(const int encoding_enum) {
+    if (encoding_enum == ANSI) {
         return TEXT("ANSI");
     }
 
-    if (encoding_enum == STRING_UTILITIES_WIDE) {
+    if (encoding_enum == WIDE) {
         return TEXT("UTF-16 LE BOM (Wide)");
     }
 
-    if (encoding_enum == STRING_UTILITIES_UTF8) {
+    if (encoding_enum == UTF8) {
         return TEXT("UTF-8");
     }
 
-    if (encoding_enum == STRING_UTILITIES_UTF8_WITH_BOM) {
+    if (encoding_enum == UTF8_WITH_BOM) {
         return TEXT("UTF-8 BOM");
     }
 

@@ -32,13 +32,21 @@ WinMain
 #endif
 
     InitCommonControls();
-    WINDOWS_HELPER_set_interface_type();
-    WINDOWS_HELPER_interface_type = WINDOWS_HELPER_MULTIPLE_DOCUMENT_INTERFACE;
-    //WINDOWS_HELPER_interface_type = WINDOWS_HELPER_SINGLE_DOCUMENT_INTERFACE;
+    WINDOWS_HELPER_set_types();
+    WINDOWS_HELPER_get_AddFontResourceEx();
+    WINDOWS_HELPER_get_RemoveFontResourceEx();
+    WINDOWS_HELPER_get_ImmGetContext();
+    WINDOWS_HELPER_get_ImmGetCompositionString();
+    WINDOWS_HELPER_get_ImmReleaseContext();
+    WINDOWS_HELPER_get_DwmEnableBlurBehindWindow();
+    WINDOWS_HELPER_get_DwmExtendFrameIntoClientArea();
+    WINDOWS_HELPER_get_SetLayeredWindowAttributes();
+    WINDOWS_HELPER_get_DwmGetColorizationColor();
+ 
+    //WINDOWS_HELPER_document_type = MDI;
+    WINDOWS_HELPER_document_type = SDI;
 
     MAIN_WINDOW_initialize();
-    MAIN_WINDOW_show();
-
     MSG msg = { 0 };
     while (GetMessage(&msg, NULL, 0, 0) > 0) {
         TranslateMessage(&msg);
@@ -48,6 +56,10 @@ WinMain
 #ifdef CRT_MAIN
     ExitProcess(0);
 #else
+    WINDOWS_HELPER_TOUCH(hInstance);
+    WINDOWS_HELPER_TOUCH(hPrevInstance);
+    WINDOWS_HELPER_TOUCH(lpCmdLine);
+    WINDOWS_HELPER_TOUCH(nShowCmd);
     return 0;
 #endif
 }

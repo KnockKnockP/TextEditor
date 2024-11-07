@@ -10,7 +10,7 @@
 
 typedef struct _TEXT_FILE {
     WIDE_STRING text;
-    BYTE encoding;
+    int encoding;
 } TEXT_FILE;
 
 void TEXT_FILE_destroy(TEXT_FILE *pText_file);

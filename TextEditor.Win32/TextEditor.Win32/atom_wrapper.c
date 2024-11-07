@@ -10,6 +10,7 @@ void ATOM_WRAPPER_initialize(ATOM_WRAPPER *pAtom_wrapper, WIDE_STRING *pName, co
     WNDCLASS wnd_class = { 0 };
     wnd_class.lpszClassName = name;
     wnd_class.style = style;
+    wnd_class.hCursor = LoadCursor(NULL, IDC_ARROW);
     wnd_class.lpfnWndProc = callback;
 
     pAtom_wrapper->atom = RegisterClass(&wnd_class);

@@ -19,7 +19,8 @@ function##_fetched WINDOWS_HELPER_get_##function(void) { \
 }
 #endif
 
-BYTE WINDOWS_HELPER_interface_type = WINDOWS_HELPER_MULTIPLE_DOCUMENT_INTERFACE;
+BYTE WINDOWS_HELPER_document_type = MDI, WINDOWS_HELPER_style = CLASSIC;
+BOOL WINDOWS_HELPER_is_aero = FALSE;
 
 FARPROC WINDOWS_HELPER_get_function(LPCTSTR pLibrary_name, LPCSTR pFunction_name) {
     const HMODULE library = LoadLibrary(pLibrary_name);
@@ -40,18 +41,34 @@ WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(RemoveFontResourceEx, "gdi32.dll")
 WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(ImmGetContext, "imm32.dll")
 WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(ImmGetCompositionString, "imm32.dll")
 WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(ImmReleaseContext, "imm32.dll")
+WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(DwmEnableBlurBehindWindow, "dwmapi.dll")
+WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(DwmExtendFrameIntoClientArea, "dwmapi.dll")
+WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(SetLayeredWindowAttributes, "user32.dll")
+WINDOWS_HELPER_GET_FUNCTION_IMPLEMENTATION(DwmGetColorizationColor, "dwmapi.dll")
 
-void WINDOWS_HELPER_set_interface_type(void) {
+void WINDOWS_HELPER_set_types(void) {
     const DWORD version = GetVersion(),
                 loword = LOWORD(version),
                 major = LOBYTE(loword),
                 minor = HIBYTE(loword);
 
-    if (major == 4) {
-        WINDOWS_HELPER_interface_type = WINDOWS_HELPER_SINGLE_DOCUMENT_INTERFACE;
+    if (major <= 2 || major == 4) {
+        WINDOWS_HELPER_document_type = SDI;
     } else if ((major == 5 && minor >= 1) || major >= 6) {
-        WINDOWS_HELPER_interface_type = WINDOWS_HELPER_TABBED_DOCUMENT_INTERFACE;
+        WINDOWS_HELPER_document_type = TDI;
     }
+
+    if (major == 6) {
+        if (minor == 0) {
+            WINDOWS_HELPER_style = AERO_VISTA;
+        } else if (minor == 1) {
+            WINDOWS_HELPER_style = AERO_7;
+        } else if (minor >= 2) {
+            WINDOWS_HELPER_style = METRO;
+        }
+    }
+
+    WINDOWS_HELPER_is_aero = (WINDOWS_HELPER_style == AERO_VISTA || WINDOWS_HELPER_style == AERO_7);
 }
 
 BOOL WINDOWS_HELPER_file_exists(LPCTSTR file) {

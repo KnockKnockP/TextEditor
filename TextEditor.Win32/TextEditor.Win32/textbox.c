@@ -29,7 +29,7 @@ static void TEXTBOX_CreateCaret(const TEXTBOX *pTextbox) {
     ShowCaret(pTextbox->hwnd);
 }
 
-static LPCTSTR TEXTBOX_get_encoding_string(const BYTE encoding_enum) {
+static LPCTSTR TEXTBOX_get_encoding_string(const int encoding_enum) {
     WIDE_STRING encoding = WIDE_STRING_create_w(L"Encoding: ");
     WIDE_STRING_append_string(&encoding, STRING_UTILITIES_encoding_enum_to_string(encoding_enum));
     
@@ -79,13 +79,15 @@ static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, 
         case WM_CREATE: {
             TEXTBOX *pTextbox = pBeing_created;
             pTextbox->hwnd = hwnd;
-
+            
             if (AddFontResourceEx_saved) {
-                pTextbox->font.size.x = 16;
-                pTextbox->font.size.y = 16;
-
                 pTextbox->font.pFont_file_t = WIDE_STRING_get_t_string(pTextbox->font.pFont_file);
-                if (!AddFontResourceEx_saved(pTextbox->font.pFont_file_t, FR_PRIVATE, NULL)) {
+
+                const BOOL success = AddFontResourceEx_saved(pTextbox->font.pFont_file_t, FR_PRIVATE, 0);
+                if (success) {
+                    pTextbox->font.size.x = 16;
+                    pTextbox->font.size.y = 16;
+                } else {
                     WINDOWS_HELPER_warning(TEXT("Failed to add main window's textbox's font file."));
                 }
 
@@ -122,7 +124,6 @@ static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, 
             }
 
             pTextbox->focus = TRUE;
-
             TEXTBOX_CreateCaret(pTextbox);
             return 0;
         }
@@ -136,7 +137,9 @@ static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, 
             pTextbox->size.x = LOWORD(lParam);
             pTextbox->size.y = HIWORD(lParam);
             SendMessage(pTextbox->status_bar_hwnd, WM_SIZE, wParam, lParam);
-            return 0;
+
+            printf("%d\n", pTextbox->size.y);
+            break;
         }
 
         case WM_IME_COMPOSITION: {
@@ -301,7 +304,30 @@ static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, 
                 }
             }
 
-            HBRUSH brush = CreateSolidBrush(RGB(255, 255, 255));
+            const COLORREF black = RGB(0, 0, 0), white = RGB(255, 255, 255);
+            COLORREF background_color = white, text_color = black, text_background_color = background_color;
+            if (WINDOWS_HELPER_document_type == SDI) {
+                if (WINDOWS_HELPER_is_aero) {
+                    text_color = white;
+                }
+
+                if (WINDOWS_HELPER_style == AERO_VISTA) {
+                    background_color = black;
+                    text_background_color = TRANSPARENT;
+                } else if (WINDOWS_HELPER_style == AERO_7) {
+                    background_color = WINDOWS_HELPER_TRANSPARENT_RGB;
+                    text_background_color = WINDOWS_HELPER_TRANSPARENT_RGB;
+                } else if (WINDOWS_HELPER_style == METRO && DwmGetColorizationColor_saved) {
+                    DWORD color = 0;
+                    BOOL opaque = FALSE;
+
+                    if (DwmGetColorizationColor_saved(&color, &opaque) == S_OK) {
+                        text_color = RGB((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF);
+                    }
+                }
+            }
+
+            HBRUSH brush = CreateSolidBrush(background_color);
             if (!brush) {
                 WINDOWS_HELPER_error(TEXT("Failed to create background brush."));
                 return 0;
@@ -314,6 +340,9 @@ static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, 
             DeleteObject(brush);
 
             TEXTBOX_set_caret_position_in_pixels(pTextbox, hdc);
+
+            SetTextColor(hdc, text_color);
+            SetBkColor(hdc, text_background_color);
             for (size_t i = 0; i < pTextbox->file.text.individual_lines.size; ++i) {
                 WIDE_STRING pLine = { 0 };
 
@@ -402,7 +431,7 @@ static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, 
         }
     }
 
-    if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_MULTIPLE_DOCUMENT_INTERFACE) {
+    if (WINDOWS_HELPER_document_type == MDI) {
         return DefMDIChildProc(hwnd, uMsg, wParam, lParam);
     }
 
@@ -413,12 +442,6 @@ TEXTBOX *TEXTBOX_create(const HWND parent,
                         const XY size,
                         WIDE_STRING *pFont_file,
                         WIDE_STRING *pFont_name) {
-    WINDOWS_HELPER_get_AddFontResourceEx();
-    WINDOWS_HELPER_get_RemoveFontResourceEx();
-    WINDOWS_HELPER_get_ImmGetContext();
-    WINDOWS_HELPER_get_ImmGetCompositionString();
-    WINDOWS_HELPER_get_ImmReleaseContext();
-
     TEXTBOX *pTextbox = malloc(sizeof(TEXTBOX));
     if (!pTextbox) {
         WINDOWS_HELPER_error(TEXT("Failed to allocate a new textbox."));
@@ -434,7 +457,7 @@ TEXTBOX *TEXTBOX_create(const HWND parent,
 
     TEXT_FILE text_file = { 0 };
     text_file.text = WIDE_STRING_create_empty();
-    text_file.encoding = STRING_UTILITIES_WIDE;
+    text_file.encoding = WIDE;
     pTextbox->file = text_file;
 
     FONT font = { 0 };
@@ -459,7 +482,7 @@ TEXTBOX *TEXTBOX_create(const HWND parent,
 
     pBeing_created = pTextbox;
 
-    if (WINDOWS_HELPER_interface_type == WINDOWS_HELPER_SINGLE_DOCUMENT_INTERFACE) {
+    if (WINDOWS_HELPER_document_type == SDI) {
         pTextbox->hwnd = CreateWindow(pTextbox_registered_class_name,
                                       NULL,
                                       WS_CHILD | WS_VISIBLE,
