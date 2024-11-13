@@ -2,6 +2,7 @@
 #define MAIN_WINDOW_H
 
 #include <Windows.h>
+#include <ribbon_ported.h>
 #include <textbox.h>
 
 typedef struct _MAIN_WINDOW {
@@ -11,6 +12,9 @@ typedef struct _MAIN_WINDOW {
 
     TEXTBOX *pSdi;
     WIDE_STRING font_file, font_name;
+
+    IUIFramework *pFramework;
+    UINT32 ribbon_height;
 } MAIN_WINDOW;
 
 extern MAIN_WINDOW main_window;

@@ -7,19 +7,60 @@
 #include <windows_helper.h>
 #include <string_utilities.h>
 
-#ifndef MAIN_WINDOW_OPEN
-#define MAIN_WINDOW_OPEN 1
-#endif
-
-#ifndef MAIN_WINDOW_SAVE
-#define MAIN_WINDOW_SAVE 2
-#endif
-
-#ifndef MAIN_WINDOW_QUIT
-#define MAIN_WINDOW_QUIT 3
-#endif
-
 MAIN_WINDOW main_window = { 0 };
+LONG ribbon_refernce_count = 0;
+
+HRESULT STDMETHODCALLTYPE QueryInterface(IUIApplication *This, REFIID riid, void **ppvObject) {
+    if (IsEqualIID(riid, &IID_IUnknown) || IsEqualIID(riid, &IID_IUIApplication)) {
+        *ppvObject = This;
+        This->lpVtbl->AddRef(This);
+        return S_OK;
+    }
+
+    *ppvObject = NULL;
+    return E_NOINTERFACE;
+}
+
+ULONG STDMETHODCALLTYPE AddRef(IUIApplication *This) {
+    return ++ribbon_refernce_count;
+}
+
+ULONG STDMETHODCALLTYPE Release(IUIApplication *This) {
+    return --ribbon_refernce_count;
+}
+
+HRESULT STDMETHODCALLTYPE OnViewChanged(IUIApplication *This, UINT32 viewId, UI_VIEWTYPE typeId, IUnknown *view, UI_VIEWVERB verb, INT32 uReasonCode) {
+    if (typeId == UI_VIEWTYPE_RIBBON && verb == UI_VIEWVERB_SIZE) {
+        IUIRibbon *pRibbon = NULL;
+
+        view->lpVtbl->QueryInterface(view, &IID_IUIRibbon, &pRibbon);
+        if (!pRibbon) {
+            return;
+        }
+
+        pRibbon->lpVtbl->GetHeight(pRibbon, &main_window.ribbon_height);
+        pRibbon->lpVtbl->Release(pRibbon);
+    }
+    return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE OnCreateUICommand(IUIApplication *This, UINT32 commandId, UI_COMMANDTYPE typeId, IUnknown **commandHandler) {
+    *commandHandler = NULL;
+    return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE OnDestroyUICommand(IUIApplication *This, UINT32 commandId, UI_COMMANDTYPE typeId, IUnknown *commandHandler) {
+    return S_OK;
+}
+
+IUIApplicationVtbl ribbon_table = {
+    QueryInterface,
+    AddRef,
+    Release,
+    OnViewChanged,
+    OnCreateUICommand,
+    OnDestroyUICommand
+};
 
 static TEXTBOX *MAIN_WINDOW_create_mdi_child(void) {
     TEXTBOX *pTextbox = TEXTBOX_create(main_window.hwnd, main_window.size, &main_window.font_file, &main_window.font_name);
@@ -98,6 +139,28 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
             } else if (WINDOWS_HELPER_document_type == SDI) {
                 main_window.pSdi = TEXTBOX_create(hwnd, main_window.size, &main_window.font_file, &main_window.font_name);
             }
+
+            CoCreateInstance(&CLSID_UIRibbonFramework,
+                             NULL,
+                             CLSCTX_INPROC_SERVER,
+                             &IID_IUIFramework,
+                             (void **)&main_window.pFramework);
+            if (!main_window.pFramework) {
+                return 0;
+            }
+
+            main_window.ribbon_height = 100;
+            /*
+            IUIApplication *pApplication = GlobalAlloc(GMEM_FIXED, sizeof(IUIApplication));
+            if (!pApplication) {
+                return 0;
+            }
+            pApplication->lpVtbl = &ribbon_table;
+
+            pApplication->lpVtbl->QueryInterface(pApplication, &IID_IUIApplication, &pApplication);
+            main_window.pFramework->lpVtbl->Initialize(main_window.pFramework, hwnd, pApplication);
+            main_window.pFramework->lpVtbl->LoadUI(main_window.pFramework, GetModuleHandle(NULL), L"APPLICATION_RIBBON");
+            */
             return 0;
         }
 
@@ -209,8 +272,8 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
             }
 
             if (!MoveWindow(textbox,
-                            0, 0,
-                            main_window.size.x, main_window.size.y,
+                            0, main_window.ribbon_height,
+                            main_window.size.x, main_window.size.y - main_window.ribbon_height,
                             FALSE)) {
                             WINDOWS_HELPER_warning(TEXT("Failed to resize."));
             }
@@ -241,6 +304,10 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
         case WM_DESTROY:
             WIDE_STRING_destroy(&main_window.font_file);
             WIDE_STRING_destroy(&main_window.font_name);
+
+            if (main_window.pFramework) {
+                main_window.pFramework->lpVtbl->Release(main_window.pFramework);
+            }
             PostQuitMessage(0);
             return 0;
     }
@@ -261,6 +328,9 @@ void MAIN_WINDOW_initialize(void) {
     main_window.pSdi = NULL;
     main_window.font_file = WIDE_STRING_create_w(L"unifont-15.1.05.otf");
     main_window.font_name = WIDE_STRING_create_w(L"Unifont");
+
+    main_window.pFramework = NULL;
+    main_window.ribbon_height = 0;
 
     ATOM_WRAPPER main_window_class = { 0 };
     WIDE_STRING main_window_class_name = WIDE_STRING_create_w(L"Text Editor"),

@@ -120,8 +120,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="atom_wrapper.c" />
-    <ClInclude Include="win32_ribbon.h" />
+    <ClCompile Include="ribbon_ported.c" />
     <ClCompile Include="XY.c" />
+    <ClInclude Include="ribbon.h" />
     <ClInclude Include="atom_wrapper.h" />
     <ClCompile Include="main.c" />
     <ClCompile Include="main_window.c" />
@@ -132,9 +133,8 @@
     <ClCompile Include="windows_helper.c" />
     <ClInclude Include="leak_checker.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="ribbon.h" />
+    <ClInclude Include="ribbon_ported.h" />
     <ClInclude Include="vector.h" />
-    <ClInclude Include="win32_ribbon_def.h" />
     <ClInclude Include="windows_versions.h" />
     <ClInclude Include="XY.h" />
   </ItemGroup>
@@ -146,6 +146,7 @@
     <ClInclude Include="windows_helper.h" />
   </ItemGroup>
   <ItemGroup>
+    <ResourceCompile Include="ribbon.rc" />
     <ResourceCompile Include="resource.rc" />
   </ItemGroup>
   <ItemGroup>
@@ -162,6 +163,12 @@
     <CopyFileToFolders Include="Resources\unifont-15.1.05.otf">
       <FileType>Document</FileType>
     </CopyFileToFolders>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ribbon.bml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="ribbon.xml" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

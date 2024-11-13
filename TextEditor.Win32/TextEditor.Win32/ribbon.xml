@@ -1,0 +1,17 @@
+<Application xmlns="http://schemas.microsoft.com/windows/2009/Ribbon">
+    <Application.Commands>
+        <Command Name="cmdExit" LabelTitle="Exit Application" />
+    </Application.Commands>
+
+    <Application.Views>
+      <Ribbon>
+        <Ribbon.Tabs>
+          <Tab>
+            <Group>
+              <Button CommandName="cmdExit" />
+            </Group>
+          </Tab>
+        </Ribbon.Tabs>
+      </Ribbon>
+    </Application.Views>
+</Application>

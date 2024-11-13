@@ -1,0 +1,28 @@
+// ******************************************************************************
+// * This is an automatically generated file containing the ribbon resource for *
+// * your application.                                                          *
+// ******************************************************************************
+
+#include ".\ribbon.h"
+
+STRINGTABLE 
+BEGIN
+    cmdExit_LabelTitle_RESID L"Exit Application" /* LabelTitle cmdExit_LabelTitle_RESID: (null) */
+END
+
+STRINGTABLE 
+BEGIN
+    InternalCmd2_LabelTitle_RESID L"Label:InternalCmd2" /* LabelTitle InternalCmd2_LabelTitle_RESID: (null) */
+END
+
+STRINGTABLE 
+BEGIN
+    InternalCmd4_LabelTitle_RESID L"Label:InternalCmd4" /* LabelTitle InternalCmd4_LabelTitle_RESID: (null) */
+END
+
+STRINGTABLE 
+BEGIN
+    InternalCmd6_LabelTitle_RESID L"Label:InternalCmd6" /* LabelTitle InternalCmd6_LabelTitle_RESID: (null) */
+END
+
+APPLICATION_RIBBON    UIFILE    "ribbon.bml"

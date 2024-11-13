@@ -42,6 +42,9 @@
     <ClCompile Include="XY.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ribbon_ported.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main_window.h">
@@ -77,18 +80,18 @@
     <ClInclude Include="leak_checker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ribbon_ported.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="ribbon.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="win32_ribbon.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="win32_ribbon_def.h">
-      <Filter>Header Files</Filter>
+      <Filter>Resource Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="ribbon.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
@@ -101,5 +104,15 @@
     <CopyFileToFolders Include="Resources\unifont-15.1.05.otf">
       <Filter>Resource Files</Filter>
     </CopyFileToFolders>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ribbon.bml">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="ribbon.xml">
+      <Filter>Resource Files</Filter>
+    </Xml>
   </ItemGroup>
 </Project>

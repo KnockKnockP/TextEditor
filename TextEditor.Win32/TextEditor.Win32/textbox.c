@@ -39,9 +39,7 @@ static LPCTSTR TEXTBOX_get_encoding_string(const int encoding_enum) {
 }
 
 static void TEXTBOX_set_caret_position_in_pixels(TEXTBOX *pTextbox, const HDC hdc) {
-    size_t size = sizeof(WCHAR) * (pTextbox->caret.x + 1);
-
-    size_t ime_characters = 0, ime_size = 0;
+    size_t size = sizeof(WCHAR) * (pTextbox->caret.x + 1), ime_characters = 0, ime_size = 0;
     if (pTextbox->ime.pWide_string) {
         ime_characters = wcslen(pTextbox->ime.pWide_string);
         ime_size = sizeof(WCHAR) * ime_characters;
@@ -137,8 +135,6 @@ static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, 
             pTextbox->size.x = LOWORD(lParam);
             pTextbox->size.y = HIWORD(lParam);
             SendMessage(pTextbox->status_bar_hwnd, WM_SIZE, wParam, lParam);
-
-            printf("%d\n", pTextbox->size.y);
             break;
         }
 

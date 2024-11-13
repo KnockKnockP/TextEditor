@@ -1,4 +1,5 @@
 CXX = gcc
+UICC = "/c/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x86/uicc.exe"
 
 ifdef OLD_TOOLS
     CXX = ./Tools/gcc_win98/bin/gcc.exe
@@ -22,7 +23,7 @@ RESOURCES_DIR = $(SOURCE_DIR)/Resources
 BIN_DIR = ./bin
 BUILD_DIR = $(BIN_DIR)/$(ARCH)/$(WINDOWS_VERSION)/$(UNICODE_BUILD_PATH)/$(BIT)
 
-LINKS = $(BUILD_DIR)/resource.o -lcomctl32 -ldwmapi -luxtheme
+LINKS = $(BUILD_DIR)/resource.o $(BUILD_DIR)/ribbon.o -lcomctl32 -ldwmapi -luxtheme -lole32
 ifdef USE_CRT_MAIN
     CRT_MAIN = -DCRT_MAIN -ffreestanding
     LINKS += -nostdlib -lmsvcrt -lkernel32 -luser32 -lgdi32 -limm32 -lcomdlg32 -ladvapi32
@@ -42,11 +43,16 @@ $(BUILD_DIR):
 $(BUILD_DIR)/%.o: $(SOURCE_DIR)/%.c | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@ -I$(INCLUDE_DIR)
 
-$(TARGET): $(OBJS) $(BUILD_DIR)/resource.o
+$(TARGET): $(OBJS) $(BUILD_DIR)/resource.o $(BUILD_DIR)/ribbon.o
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $@ $(LINKS)
 
 $(BUILD_DIR)/resource.o: $(SOURCE_DIR)/resource.rc | $(BUILD_DIR)
 	windres $(SOURCE_DIR)/resource.rc -o $(BUILD_DIR)/resource.o
+
+$(BUILD_DIR)/ribbon.o: $(SOURCE_DIR)/ribbon.rc | $(BUILD_DIR)
+	$(UICC) $(SOURCE_DIR)/ribbon.xml ribbon.bml /header:ribbon.h /res:ribbon.rc
+	mv ./ribbon.bml ./ribbon.h ./ribbon.rc ./$(SOURCE_DIR)/
+	windres $(SOURCE_DIR)/ribbon.rc -o $(BUILD_DIR)/ribbon.o
 
 RESOURCES:
 	cp $(RESOURCES_DIR)/* $(BUILD_DIR)

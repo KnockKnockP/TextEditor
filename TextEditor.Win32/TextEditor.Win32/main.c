@@ -32,6 +32,7 @@ WinMain
 #endif
 
     InitCommonControls();
+    CoInitialize(NULL);
     WINDOWS_HELPER_set_types();
     WINDOWS_HELPER_get_AddFontResourceEx();
     WINDOWS_HELPER_get_RemoveFontResourceEx();
@@ -52,6 +53,8 @@ WinMain
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+
+    CoUninitialize();
 
 #ifdef CRT_MAIN
     ExitProcess(0);
