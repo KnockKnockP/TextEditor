@@ -1,6 +1,7 @@
 #include <leak_checker.h>
 
 #include <main_window.h>
+#include <strings.h>
 #include <resource.h>
 #include <atom_wrapper.h>
 #include <memory_helper.h>
@@ -22,20 +23,26 @@ HRESULT STDMETHODCALLTYPE QueryInterface(IUIApplication *This, REFIID riid, void
 }
 
 ULONG STDMETHODCALLTYPE AddRef(IUIApplication *This) {
+    UNREFERENCED_PARAMETER(This);
     return ++ribbon_refernce_count;
 }
 
 ULONG STDMETHODCALLTYPE Release(IUIApplication *This) {
+    UNREFERENCED_PARAMETER(This);
     return --ribbon_refernce_count;
 }
 
 HRESULT STDMETHODCALLTYPE OnViewChanged(IUIApplication *This, UINT32 viewId, UI_VIEWTYPE typeId, IUnknown *view, UI_VIEWVERB verb, INT32 uReasonCode) {
+    UNREFERENCED_PARAMETER(This);
+    UNREFERENCED_PARAMETER(viewId);
+    UNREFERENCED_PARAMETER(uReasonCode);
+
     if (typeId == UI_VIEWTYPE_RIBBON && verb == UI_VIEWVERB_SIZE) {
         IUIRibbon *pRibbon = NULL;
 
-        view->lpVtbl->QueryInterface(view, &IID_IUIRibbon, &pRibbon);
+        view->lpVtbl->QueryInterface(view, &IID_IUIRibbon, (void **)&pRibbon);
         if (!pRibbon) {
-            return;
+            return S_FALSE;
         }
 
         pRibbon->lpVtbl->GetHeight(pRibbon, &main_window.ribbon_height);
@@ -45,11 +52,20 @@ HRESULT STDMETHODCALLTYPE OnViewChanged(IUIApplication *This, UINT32 viewId, UI_
 }
 
 HRESULT STDMETHODCALLTYPE OnCreateUICommand(IUIApplication *This, UINT32 commandId, UI_COMMANDTYPE typeId, IUnknown **commandHandler) {
+    UNREFERENCED_PARAMETER(This);
+    UNREFERENCED_PARAMETER(commandId);
+    UNREFERENCED_PARAMETER(typeId);
+
     *commandHandler = NULL;
     return S_OK;
 }
 
 HRESULT STDMETHODCALLTYPE OnDestroyUICommand(IUIApplication *This, UINT32 commandId, UI_COMMANDTYPE typeId, IUnknown *commandHandler) {
+    UNREFERENCED_PARAMETER(This);
+    UNREFERENCED_PARAMETER(commandId);
+    UNREFERENCED_PARAMETER(typeId);
+    UNREFERENCED_PARAMETER(commandHandler);
+
     return S_OK;
 }
 
@@ -83,20 +99,15 @@ static TEXTBOX *MAIN_WINDOW_create_mdi_child(void) {
 LRESULT CALLBACK MAIN_WINDOW_MDI_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_ERASEBKGND:
-            if (!WINDOWS_HELPER_is_aero) {
+            if (WINDOWS_HELPER_style != AERO) {
                 break;
-            }
-
-            COLORREF background = RGB(0, 0, 0);
-            if (WINDOWS_HELPER_style == AERO_7) {
-                background = WINDOWS_HELPER_TRANSPARENT_RGB;
             }
 
             const HDC hdc = (HDC)wParam;
             RECT rect = { 0 };
             GetClientRect(hwnd, &rect);
 
-            const HBRUSH brush = CreateSolidBrush(background);
+            const HBRUSH brush = CreateSolidBrush(RGB(0, 0, 0));
             FillRect(hdc, &rect, brush);
             DeleteObject(brush);
             return TRUE;
@@ -110,21 +121,12 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
         case WM_CREATE: {
             main_window.hwnd = hwnd;
 
-            if (WINDOWS_HELPER_style == AERO_VISTA && DwmEnableBlurBehindWindow_saved) {
+            if (WINDOWS_HELPER_style == AERO && DwmEnableBlurBehindWindow_saved) {
                 DWM_BLURBEHIND dwm = { 0 };
                 dwm.dwFlags = DWM_BB_ENABLE;
                 dwm.fEnable = TRUE;
 
                 DwmEnableBlurBehindWindow_saved(hwnd, &dwm);
-            } else if (WINDOWS_HELPER_style == AERO_7 && DwmExtendFrameIntoClientArea_saved && SetLayeredWindowAttributes_saved) {
-                MARGINS margins = { 0 };
-                margins.cxLeftWidth = -1;
-                margins.cxRightWidth = -1;
-                margins.cyTopHeight = -1;
-                margins.cyBottomHeight = -1;
-                DwmExtendFrameIntoClientArea_saved(hwnd, &margins);
-
-                SetLayeredWindowAttributes_saved(hwnd, WINDOWS_HELPER_TRANSPARENT_RGB, 0, LWA_COLORKEY);
             }
 
             if (WINDOWS_HELPER_document_type == MDI) {
@@ -149,20 +151,29 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                 return 0;
             }
 
-            main_window.ribbon_height = 100;
-            /*
             IUIApplication *pApplication = GlobalAlloc(GMEM_FIXED, sizeof(IUIApplication));
             if (!pApplication) {
                 return 0;
             }
             pApplication->lpVtbl = &ribbon_table;
 
-            pApplication->lpVtbl->QueryInterface(pApplication, &IID_IUIApplication, &pApplication);
+            pApplication->lpVtbl->QueryInterface(pApplication, &IID_IUIApplication, (void **)&pApplication);
             main_window.pFramework->lpVtbl->Initialize(main_window.pFramework, hwnd, pApplication);
             main_window.pFramework->lpVtbl->LoadUI(main_window.pFramework, GetModuleHandle(NULL), L"APPLICATION_RIBBON");
-            */
             return 0;
         }
+
+        case WM_SETFOCUS:
+            if (main_window.pSdi) {
+                SendMessage(main_window.pSdi->hwnd, WM_SETFOCUS, 0, 0);
+            }
+            return 0;
+
+        case WM_KILLFOCUS:
+            if (main_window.pSdi) {
+                SendMessageW(main_window.pSdi->hwnd, WM_KILLFOCUS, 0, 0);
+            }
+            return 0;
 
         case WM_COMMAND:
             switch (LOWORD(wParam)) {
@@ -240,7 +251,7 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                     return 0;
                 }
 
-                case ID_MAIN_WINDOW_MENU_FILE_QUIT:
+                case ID_MAIN_WINDOW_MENU_FILE_EXIT:
                     SendMessage(hwnd, WM_CLOSE, 0, 0);
                     return 0;
             }
@@ -284,7 +295,7 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
 
         case WM_CLOSE: {
             WIDE_STRING text = WIDE_STRING_create_w(L"정말로 종료하시겠습니까?"),
-                        caption = WIDE_STRING_create_w(L"Are you sure you want to quit?");
+                        caption = WIDE_STRING_create_w(L"Are you sure you want to exit?");
             LPCTSTR pText = WIDE_STRING_get_t_string(&text), pCaption = WIDE_STRING_get_t_string(&caption);
 
             if (MessageBox(main_window.hwnd,
@@ -334,7 +345,7 @@ void MAIN_WINDOW_initialize(void) {
 
     ATOM_WRAPPER main_window_class = { 0 };
     WIDE_STRING main_window_class_name = WIDE_STRING_create_w(L"Text Editor"),
-                main_window_title = WIDE_STRING_create_w(L"Text Editor / 문서 편집기");
+                main_window_title = WIDE_STRING_create_w(STRINGS_MAIN_WINDOW_TITLE());
 
     ATOM_WRAPPER_initialize(&main_window_class, &main_window_class_name, 0, MAIN_WINDOW_DefWindowProc);
     
@@ -342,28 +353,15 @@ void MAIN_WINDOW_initialize(void) {
             pMain_window_title = WIDE_STRING_get_t_string(&main_window_title);
 
     const HMENU menu = LoadMenu(NULL, MAKEINTRESOURCE(IDR_MAIN_WINDOW_MENU));
-    if (WINDOWS_HELPER_style == AERO_7) {
-        main_window.hwnd = CreateWindowEx(WS_EX_LAYERED,
-                                          pMain_window_class_name,
-                                          pMain_window_title,
-                                          WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-                                          CW_USEDEFAULT, CW_USEDEFAULT,
-                                          CW_USEDEFAULT, CW_USEDEFAULT,
-                                          NULL,
-                                          menu,
-                                          NULL,
-                                          NULL);
-    } else {
-        main_window.hwnd = CreateWindow(pMain_window_class_name,
-                                        pMain_window_title,
-                                        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-                                        CW_USEDEFAULT, CW_USEDEFAULT,
-                                        CW_USEDEFAULT, CW_USEDEFAULT,
-                                        NULL,
-                                        menu,
-                                        NULL,
-                                        NULL);
-    }
+    main_window.hwnd = CreateWindow(pMain_window_class_name,
+                                    pMain_window_title,
+                                    WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                                    CW_USEDEFAULT, CW_USEDEFAULT,
+                                    CW_USEDEFAULT, CW_USEDEFAULT,
+                                    NULL,
+                                    menu,
+                                    NULL,
+                                    NULL);
     
     if (!main_window.hwnd) {
         WINDOWS_HELPER_error(TEXT("Failed to create main window."));

@@ -18,5 +18,6 @@ typedef struct _MAIN_WINDOW {
 } MAIN_WINDOW;
 
 extern MAIN_WINDOW main_window;
+
 void MAIN_WINDOW_initialize(void);
 #endif

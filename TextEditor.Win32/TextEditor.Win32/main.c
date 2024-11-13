@@ -3,6 +3,7 @@
 
 #include <Windows.h>
 #include <CommCtrl.h>
+#include <strings.h>
 #include <main_window.h>
 #include <windows_helper.h>
 
@@ -40,9 +41,8 @@ WinMain
     WINDOWS_HELPER_get_ImmGetCompositionString();
     WINDOWS_HELPER_get_ImmReleaseContext();
     WINDOWS_HELPER_get_DwmEnableBlurBehindWindow();
-    WINDOWS_HELPER_get_DwmExtendFrameIntoClientArea();
-    WINDOWS_HELPER_get_SetLayeredWindowAttributes();
     WINDOWS_HELPER_get_DwmGetColorizationColor();
+    STRINGS_initialize();
  
     //WINDOWS_HELPER_document_type = MDI;
     WINDOWS_HELPER_document_type = SDI;
@@ -59,10 +59,10 @@ WinMain
 #ifdef CRT_MAIN
     ExitProcess(0);
 #else
-    WINDOWS_HELPER_TOUCH(hInstance);
-    WINDOWS_HELPER_TOUCH(hPrevInstance);
-    WINDOWS_HELPER_TOUCH(lpCmdLine);
-    WINDOWS_HELPER_TOUCH(nShowCmd);
+    UNREFERENCED_PARAMETER(hInstance);
+    UNREFERENCED_PARAMETER(hPrevInstance);
+    UNREFERENCED_PARAMETER(lpCmdLine);
+    UNREFERENCED_PARAMETER(nShowCmd);
     return 0;
 #endif
 }

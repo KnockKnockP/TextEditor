@@ -121,6 +121,7 @@
   <ItemGroup>
     <ClCompile Include="atom_wrapper.c" />
     <ClCompile Include="ribbon_ported.c" />
+    <ClCompile Include="strings.c" />
     <ClCompile Include="XY.c" />
     <ClInclude Include="ribbon.h" />
     <ClInclude Include="atom_wrapper.h" />
@@ -134,6 +135,7 @@
     <ClInclude Include="leak_checker.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="ribbon_ported.h" />
+    <ClInclude Include="strings.h" />
     <ClInclude Include="vector.h" />
     <ClInclude Include="windows_versions.h" />
     <ClInclude Include="XY.h" />

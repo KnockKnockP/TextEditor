@@ -45,6 +45,9 @@
     <ClCompile Include="ribbon_ported.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="strings.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main_window.h">
@@ -85,6 +88,9 @@
     </ClInclude>
     <ClInclude Include="ribbon.h">
       <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="strings.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

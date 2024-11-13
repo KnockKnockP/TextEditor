@@ -303,16 +303,10 @@ static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, 
             const COLORREF black = RGB(0, 0, 0), white = RGB(255, 255, 255);
             COLORREF background_color = white, text_color = black, text_background_color = background_color;
             if (WINDOWS_HELPER_document_type == SDI) {
-                if (WINDOWS_HELPER_is_aero) {
+                if (WINDOWS_HELPER_style == AERO) {
                     text_color = white;
-                }
-
-                if (WINDOWS_HELPER_style == AERO_VISTA) {
-                    background_color = black;
                     text_background_color = TRANSPARENT;
-                } else if (WINDOWS_HELPER_style == AERO_7) {
-                    background_color = WINDOWS_HELPER_TRANSPARENT_RGB;
-                    text_background_color = WINDOWS_HELPER_TRANSPARENT_RGB;
+                    background_color = black;
                 } else if (WINDOWS_HELPER_style == METRO && DwmGetColorizationColor_saved) {
                     DWORD color = 0;
                     BOOL opaque = FALSE;

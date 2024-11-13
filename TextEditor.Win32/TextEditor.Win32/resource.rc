@@ -9,6 +9,6 @@ BEGIN
         MENUITEM "Open",                        ID_MAIN_WINDOW_MENU_FILE_OPEN
         MENUITEM "Save",                        ID_MAIN_WINDOW_MENU_FILE_SAVE
         MENUITEM SEPARATOR
-        MENUITEM "Quit",                        ID_MAIN_WINDOW_MENU_FILE_QUIT
+        MENUITEM "Exit",                        ID_MAIN_WINDOW_MENU_FILE_EXIT
     END
 END
