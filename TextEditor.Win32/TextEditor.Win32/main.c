@@ -20,7 +20,7 @@ wWinMain
 #else
 WinMain
 #endif
-(const HINSTANCE hInstance, const HINSTANCE hPrevInstance, const LPTSTR lpCmdLine, const int nShowCmd)
+(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nShowCmd)
 #endif
 {
 #if _DEBUG

@@ -1,3 +1,5 @@
+#include <leak_checker.h>
+
 #include <strings.h>
 
 #ifndef IMPLEMENT_STRING
@@ -30,4 +32,6 @@ void STRINGS_initialize(void) {
     (string, TEXT("Korean (Korea)"))) {
         locale = KO_KR;
     }
+
+    free(string);
 }

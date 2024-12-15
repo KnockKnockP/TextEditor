@@ -151,7 +151,8 @@ LPWSTR STRING_UTILITIES_UTF8_to_w(LPCSTR pUTF8_string) {
             STRING_UTILITIES_PUSH_UTF8();
         }
 
-        WCHAR converted[3] = { (WCHAR)character, 0, 0 };
+        WCHAR converted[3] = { 0 };
+        converted[0] = (WCHAR)character;
         if (character >= 0x10000) {
             character -= 0x10000;
             converted[0] = 0xD800 + (WCHAR)(character >> 10);

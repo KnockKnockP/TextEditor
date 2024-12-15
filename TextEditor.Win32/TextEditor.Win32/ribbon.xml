@@ -1,8 +1,9 @@
 <Application xmlns="http://schemas.microsoft.com/windows/2009/Ribbon">
   <Application.Commands>
-    <Command Name="cmdOpen" LabelTitle="Open" Keytip="O" Symbol="ID_MAIN_WINDOW_MENU_FILE_OPEN" />
-    <Command Name="cmdSave" LabelTitle="Save" Keytip="S" Symbol="ID_MAIN_WINDOW_MENU_FILE_SAVE" />
-    <Command Name="cmdExit" LabelTitle="Exit" Keytip="E" Symbol="ID_MAIN_WINDOW_MENU_FILE_EXIT" />
+    <Command Name="cmdFileMenu" LabelTitle="File Menu" Symbol="ID_MAIN_WINDOW_MENU_FILE_MENU_RIBBON" />
+    <Command Name="cmdOpen" LabelTitle="Open" Keytip="O" Symbol="ID_MAIN_WINDOW_MENU_FILE_OPEN_RIBBON" />
+    <Command Name="cmdSave" LabelTitle="Save" Keytip="S" Symbol="ID_MAIN_WINDOW_MENU_FILE_SAVE_RIBBON" />
+    <Command Name="cmdExit" LabelTitle="Exit" Keytip="E" Symbol="ID_MAIN_WINDOW_MENU_FILE_EXIT_RIBBON" />
   </Application.Commands>
 
   <Application.Views>
@@ -10,8 +11,8 @@
       <Ribbon.ApplicationMenu>
         <ApplicationMenu CommandName="cmdFileMenu">
           <MenuGroup Class="MajorItems">
-            <Button CommandName="cmdSave" />
             <Button CommandName="cmdOpen" />
+            <Button CommandName="cmdSave" />
             <Button CommandName="cmdExit" />
           </MenuGroup>
         </ApplicationMenu>

@@ -14,10 +14,15 @@ typedef struct _MAIN_WINDOW {
     WIDE_STRING font_file, font_name;
 
     IUIFramework *pFramework;
+    IUIApplication *pApplication;
+    IUICommandHandler *pCommand_handler;
     UINT32 ribbon_height;
 } MAIN_WINDOW;
 
 extern MAIN_WINDOW main_window;
 
 void MAIN_WINDOW_initialize(void);
+void MAIN_WINDOW_open_file(void);
+void MAIN_WINDOW_save_file(void);
+void MAIN_WINDOW_exit(void);
 #endif

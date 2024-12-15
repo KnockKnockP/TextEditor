@@ -3,10 +3,15 @@
 
 #include <windows.h>
 
+#ifndef REFPROPERTYKEY
+#define REFPROPERTYKEY const PROPERTYKEY * __MIDL_CONST
+#endif
+
 extern const GUID IID_IUnknown;
 extern const GUID IID_IUIFramework;
 extern const GUID IID_IUIApplication;
 extern const GUID IID_IUIRibbon;
+extern const GUID IID_IUICommandHandler;
 extern const GUID CLSID_UIRibbonFramework;
 
 typedef enum UI_VIEWTYPE {
@@ -24,17 +29,25 @@ typedef enum UI_COMMANDTYPE {
     UI_COMMANDTYPE_ACTION
 } UI_COMMANDTYPE;
 
+typedef enum UI_EXECUTIONVERB {
+    UI_EXECUTIONVERB_EXECUTE,
+    UI_EXECUTIONVERB_PREVIEW,
+    UI_EXECUTIONVERB_CANCELPREVIEW
+} UI_EXECUTIONVERB;
+
 typedef struct IUIApplication IUIApplication;
 typedef struct IUIFramework IUIFramework;
 typedef struct IUIRibbon IUIRibbon;
+typedef struct IUISimplePropertySet IUISimplePropertySet;
+typedef struct IUICommandHandler IUICommandHandler;
 
 typedef struct IUIApplicationVtbl {
     HRESULT(STDMETHODCALLTYPE *QueryInterface)(IUIApplication *This, REFIID riid, void **ppvObject);
     ULONG(STDMETHODCALLTYPE *AddRef)(IUIApplication *This);
     ULONG(STDMETHODCALLTYPE *Release)(IUIApplication *This);
     HRESULT(STDMETHODCALLTYPE *OnViewChanged)(IUIApplication *This, UINT32 viewId, UI_VIEWTYPE typeId, IUnknown *view, UI_VIEWVERB verb, INT32 uReasonCode);
-    HRESULT(STDMETHODCALLTYPE *OnCreateUICommand)(IUIApplication *This, UINT32 commandId, UI_COMMANDTYPE typeId, IUnknown **commandHandler);
-    HRESULT(STDMETHODCALLTYPE *OnDestroyUICommand)(IUIApplication* This, UINT32 commandId, UI_COMMANDTYPE typeId, IUnknown *commandHandler);
+    HRESULT(STDMETHODCALLTYPE *OnCreateUICommand)(IUIApplication *This, UINT32 commandId, UI_COMMANDTYPE typeId, IUICommandHandler **commandHandler);
+    HRESULT(STDMETHODCALLTYPE *OnDestroyUICommand)(IUIApplication *This, UINT32 commandId, UI_COMMANDTYPE typeId, IUICommandHandler *commandHandler);
 } IUIApplicationVtbl;
 
 struct IUIApplication {
@@ -57,14 +70,34 @@ struct IUIFramework {
 
 typedef struct IUIRibbonVtbl {
     HRESULT(STDMETHODCALLTYPE *QueryInterface)(IUIRibbon *This, REFIID riid, void **ppvObject);
-    ULONG(STDMETHODCALLTYPE* AddRef)(IUIRibbon *This);
-    ULONG(STDMETHODCALLTYPE* Release)(IUIRibbon *This);
-    HRESULT(STDMETHODCALLTYPE* GetHeight)(IUIRibbon *This, UINT32 *cy);
-    HRESULT(STDMETHODCALLTYPE* LoadSettingsFromStream)(IUIRibbon *This, IStream *pStream);
-    HRESULT(STDMETHODCALLTYPE* SaveSettingsToStream)(IUIRibbon *This, IStream *pStream);
+    ULONG(STDMETHODCALLTYPE *AddRef)(IUIRibbon *This);
+    ULONG(STDMETHODCALLTYPE *Release)(IUIRibbon *This);
+    HRESULT(STDMETHODCALLTYPE *GetHeight)(IUIRibbon *This, UINT32 *cy);
+    HRESULT(STDMETHODCALLTYPE *LoadSettingsFromStream)(IUIRibbon *This, IStream *pStream);
+    HRESULT(STDMETHODCALLTYPE *SaveSettingsToStream)(IUIRibbon *This, IStream *pStream);
 } IUIRibbonVtbl;
 
 struct IUIRibbon {
     const IUIRibbonVtbl *lpVtbl;
+};
+
+typedef struct IUISimplePropertySetVtbl {
+    HRESULT(STDMETHODCALLTYPE *GetValue)(IUISimplePropertySet *This, PROPERTYKEY *key, PROPVARIANT *value);
+} IUISimplePropertySetVtbl;
+
+struct IUISimplePropertySet {
+    const IUISimplePropertySetVtbl *lpVtbl;
+};
+
+typedef struct IUICommandHandlerVtbl {
+    HRESULT(STDMETHODCALLTYPE *QueryInterface)(IUICommandHandler *This, REFIID riid, void **ppvObject);
+    ULONG(STDMETHODCALLTYPE *AddRef)(IUICommandHandler *This);
+    ULONG(STDMETHODCALLTYPE *Release)(IUICommandHandler *This);
+    HRESULT(STDMETHODCALLTYPE *Execute)(IUICommandHandler *This, UINT32 commandId, UI_EXECUTIONVERB verb, const PROPERTYKEY *key, const PROPVARIANT *currentValue, IUISimplePropertySet *commandExecutionProperties);
+    HRESULT(STDMETHODCALLTYPE *UpdateProperty)(IUICommandHandler *This, UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue);
+} IUICommandHandlerVtbl;
+
+struct IUICommandHandler {
+    const IUICommandHandlerVtbl *lpVtbl;
 };
 #endif
