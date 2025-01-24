@@ -190,6 +190,20 @@ LRESULT CALLBACK MAIN_WINDOW_MDI_DefWindowProc(const HWND hwnd, const UINT uMsg,
     return CallWindowProcA((WNDPROC)main_window.mdi_callback, hwnd, uMsg, wParam, lParam);
 }
 
+static void send_message_to_sdi(const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
+    if (main_window.pSdi) {
+        SendMessage(main_window.pSdi->hwnd, uMsg, wParam, lParam);
+    }
+}
+
+static void send_message_to_mdi(const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
+    if (main_window.mdi) {
+        SendMessage(main_window.mdi, uMsg, wParam, lParam);
+    }
+}
+
+#include <stdio.h>
+
 LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE: {
@@ -216,37 +230,57 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                 main_window.pSdi = TEXTBOX_create(hwnd, main_window.size, &main_window.font_file, &main_window.font_name);
             }
 
+            BOOL ribbon_exists = FALSE;
             CoCreateInstance(&CLSID_UIRibbonFramework,
                              NULL,
                              CLSCTX_INPROC_SERVER,
                              &IID_IUIFramework,
                              (void **)&main_window.pFramework);
             if (!main_window.pFramework) {
-                return 0;
+                goto after_ribbon;
             }
 
             main_window.pApplication = malloc(sizeof(IUIApplication));
             if (!main_window.pApplication) {
-                return 0;
+                goto after_ribbon;
             }
             main_window.pApplication->lpVtbl = &ribbon_table;
             main_window.pApplication->lpVtbl->QueryInterface(main_window.pApplication, &IID_IUIApplication, (void **)&main_window.pApplication);
 
             main_window.pFramework->lpVtbl->Initialize(main_window.pFramework, hwnd, main_window.pApplication);
             main_window.pFramework->lpVtbl->LoadUI(main_window.pFramework, GetModuleHandle(NULL), L"APPLICATION_RIBBON");
+            ribbon_exists = TRUE;
+
+        after_ribbon:
+            if (!ribbon_exists) {
+                const HINSTANCE instance = GetModuleHandle(NULL);
+                main_window.toolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
+                                                     WS_CHILD | WS_VISIBLE | TBSTYLE_WRAPABLE,
+                                                     0, 0, 0, 0, hwnd, NULL, instance, NULL);
+                if (main_window.toolbar) {
+                    const TBADDBITMAP bitmap = { instance, IDB_TOOLBAR };
+                    SendMessage(main_window.toolbar, TB_ADDBITMAP, 2, (LPARAM)&bitmap);
+                    SendMessage(main_window.toolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
+
+                    const TBBUTTON buttons[2] = {
+                        { MAKELONG(0, 0), ID_MAIN_WINDOW_MENU_FILE_OPEN, TBSTATE_ENABLED, BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)TEXT("Open") },
+                        { MAKELONG(1, 0), ID_MAIN_WINDOW_MENU_FILE_SAVE, TBSTATE_ENABLED, BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)TEXT("Save") }
+                    };
+
+                    SendMessage(main_window.toolbar, TB_ADDBUTTONS, (WPARAM)2, (LPARAM)&buttons);
+                }
+            }
             return 0;
         }
 
         case WM_SETFOCUS:
-            if (main_window.pSdi) {
-                SendMessage(main_window.pSdi->hwnd, WM_SETFOCUS, 0, 0);
-            }
+            send_message_to_sdi(uMsg, 0, 0);
+            send_message_to_mdi(uMsg, 0, 0);
             return 0;
 
         case WM_KILLFOCUS:
-            if (main_window.pSdi) {
-                SendMessageW(main_window.pSdi->hwnd, WM_KILLFOCUS, 0, 0);
-            }
+            send_message_to_sdi(uMsg, 0, 0);
+            send_message_to_mdi(uMsg, 0, 0);
             return 0;
 
         case WM_COMMAND:
@@ -266,38 +300,47 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
             break;
 
         case WM_IME_COMPOSITION:
-            SendMessage(main_window.pSdi->hwnd, uMsg, wParam, lParam);
+            send_message_to_sdi(uMsg, wParam, lParam);
             return 0;
 
         case WM_CHAR:
-            SendMessage(main_window.pSdi->hwnd, uMsg, wParam, lParam);
+            send_message_to_sdi(uMsg, wParam, lParam);
             return 0;
 
         case WM_KEYDOWN:
-            SendMessage(main_window.pSdi->hwnd, uMsg, wParam, lParam);
+            send_message_to_sdi(uMsg, wParam, lParam);
             return 0;
 
         case WM_SIZE: {
             main_window.size.x = LOWORD(lParam);
             main_window.size.y = HIWORD(lParam);
 
-            if (!main_window.pSdi) {
+            int toolbar_height = 0;
+            if (main_window.toolbar) {
+                RECT toolbar_rect = { 0 };
+                GetWindowRect(main_window.toolbar, &toolbar_rect);
+                toolbar_height = toolbar_rect.bottom - toolbar_rect.top;
+            }
+
+            HWND window = main_window.mdi;
+            if (main_window.pSdi) {
+                window = main_window.pSdi->hwnd;
+            }
+            if (!window) {
                 break;
             }
 
-            const HWND textbox = main_window.pSdi->hwnd;
-            if (!textbox) {
-                break;
+            if (!MoveWindow(window,
+                0, main_window.ribbon_height + toolbar_height,
+                main_window.size.x, main_window.size.y - main_window.ribbon_height - toolbar_height,
+                FALSE)) {
+                WINDOWS_HELPER_warning(TEXT("Failed to resize."));
             }
 
-            if (!MoveWindow(textbox,
-                            0, main_window.ribbon_height,
-                            main_window.size.x, main_window.size.y - main_window.ribbon_height,
-                            FALSE)) {
-                            WINDOWS_HELPER_warning(TEXT("Failed to resize."));
+            InvalidateRect(window, NULL, TRUE);
+            if (main_window.mdi) {
+                TEXTBOX_mdi_redraw();
             }
-
-            TEXTBOX_request_redraw(main_window.pSdi);
             return 0;
         }
 
@@ -341,7 +384,10 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
 }
 
 void MAIN_WINDOW_initialize(void) {
+    main_window.hwnd = NULL;
+
     main_window.mdi_callback = (LONG_PTR)NULL;
+    main_window.toolbar_callback = (LONG_PTR)NULL;
 
     XY size = { 0 };
     main_window.size = size;

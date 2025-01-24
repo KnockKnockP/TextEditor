@@ -47,6 +47,7 @@ TEXTBOX *TEXTBOX_create(const HWND parent,
 void TEXTBOX_set_file(TEXTBOX *pTextbox, const TEXT_FILE text_file);
 TEXTBOX *TEXTBOX_find_by_HWND(const HWND hwnd);
 void TEXTBOX_request_redraw(const TEXTBOX *pTextbox);
+void TEXTBOX_mdi_redraw(void);
 void TEXTBOX_set_caret_position(TEXTBOX *pTextbox, int x, int y);
 
 #ifndef UNICODE

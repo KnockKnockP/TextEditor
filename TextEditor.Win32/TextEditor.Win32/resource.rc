@@ -6,9 +6,11 @@ IDR_MAIN_WINDOW_MENU MENU
 BEGIN
     POPUP "File"
     BEGIN
-        MENUITEM "Open",                        ID_MAIN_WINDOW_MENU_FILE_OPEN
-        MENUITEM "Save",                        ID_MAIN_WINDOW_MENU_FILE_SAVE
+        MENUITEM "Open", ID_MAIN_WINDOW_MENU_FILE_OPEN
+        MENUITEM "Save", ID_MAIN_WINDOW_MENU_FILE_SAVE
         MENUITEM SEPARATOR
-        MENUITEM "Exit",                        ID_MAIN_WINDOW_MENU_FILE_EXIT
+        MENUITEM "Exit", ID_MAIN_WINDOW_MENU_FILE_EXIT
     END
 END
+
+IDB_TOOLBAR BITMAP "toolbar.bmp"

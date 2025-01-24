@@ -6,8 +6,8 @@
 #include <textbox.h>
 
 typedef struct _MAIN_WINDOW {
-    HWND hwnd, mdi;
-    LONG_PTR mdi_callback;
+    HWND hwnd, mdi, toolbar;
+    LONG_PTR mdi_callback, toolbar_callback;
     XY size;
 
     TEXTBOX *pSdi;

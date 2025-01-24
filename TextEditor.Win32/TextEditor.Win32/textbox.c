@@ -291,7 +291,7 @@ static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, 
             HDC hdc = BeginPaint(hwnd, &paint_struct);
             if (!hdc) {
                 WINDOWS_HELPER_error(TEXT("Failed to fetch main window's textbox's paint data."));
-                return 0;
+                break;
             }
 
             if (AddFontResourceEx_saved) {
@@ -320,12 +320,12 @@ static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, 
             HBRUSH brush = CreateSolidBrush(background_color);
             if (!brush) {
                 WINDOWS_HELPER_error(TEXT("Failed to create background brush."));
-                return 0;
+                break;
             }
 
             if (!FillRect(hdc, &paint_struct.rcPaint, brush)) {
                 WINDOWS_HELPER_error(TEXT("Failed to fill main window's textbox's rectangle."));
-                return 0;
+                break;
             }
             DeleteObject(brush);
 
@@ -372,7 +372,7 @@ static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, 
                 SetCaretPos(pTextbox->caret_pixels.x, pTextbox->caret_pixels.y);
             }
             EndPaint(hwnd, &paint_struct);
-            return 0;
+            break;
         }
 
         case WM_KILLFOCUS: {
@@ -516,6 +516,15 @@ void TEXTBOX_set_file(TEXTBOX *pTextbox, const TEXT_FILE text_file) {
 
 void TEXTBOX_request_redraw(const TEXTBOX *pTextbox) {
     InvalidateRect(pTextbox->hwnd, NULL, FALSE);
+}
+
+void TEXTBOX_mdi_redraw(void) {
+    for (size_t i = 0; i < textboxes.size; ++i) {
+        const TEXTBOX *pTextbox = textboxes.pArray[i];
+        if (pTextbox) {
+            SetWindowPos(pTextbox->hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_DRAWFRAME);
+        }
+    }
 }
 
 void TEXTBOX_set_caret_position(TEXTBOX *pTextbox, int x, int y) {
