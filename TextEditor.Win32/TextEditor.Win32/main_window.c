@@ -202,20 +202,10 @@ static void send_message_to_mdi(const UINT uMsg, const WPARAM wParam, const LPAR
     }
 }
 
-#include <stdio.h>
-
 LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE: {
             main_window.hwnd = hwnd;
-
-            if (WINDOWS_HELPER_style == AERO && DwmEnableBlurBehindWindow_saved) {
-                DWM_BLURBEHIND dwm = { 0 };
-                dwm.dwFlags = DWM_BB_ENABLE;
-                dwm.fEnable = TRUE;
-
-                DwmEnableBlurBehindWindow_saved(hwnd, &dwm);
-            }
 
             if (WINDOWS_HELPER_document_type == MDI) {
                 CLIENTCREATESTRUCT client_create_struct = { 0 };
@@ -231,6 +221,7 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
             }
 
             BOOL ribbon_exists = FALSE;
+#ifdef USE_RIBBON
             CoCreateInstance(&CLSID_UIRibbonFramework,
                              NULL,
                              CLSCTX_INPROC_SERVER,
@@ -250,6 +241,7 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
             main_window.pFramework->lpVtbl->Initialize(main_window.pFramework, hwnd, main_window.pApplication);
             main_window.pFramework->lpVtbl->LoadUI(main_window.pFramework, GetModuleHandle(NULL), L"APPLICATION_RIBBON");
             ribbon_exists = TRUE;
+#endif
 
         after_ribbon:
             if (!ribbon_exists) {
@@ -258,16 +250,17 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                                                      WS_CHILD | WS_VISIBLE | TBSTYLE_WRAPABLE,
                                                      0, 0, 0, 0, hwnd, NULL, instance, NULL);
                 if (main_window.toolbar) {
-                    const TBADDBITMAP bitmap = { instance, IDB_TOOLBAR };
+                    const TBADDBITMAP bitmap = { HINST_COMMCTRL, IDB_STD_SMALL_COLOR };
                     SendMessage(main_window.toolbar, TB_ADDBITMAP, 2, (LPARAM)&bitmap);
                     SendMessage(main_window.toolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
 
                     const TBBUTTON buttons[2] = {
-                        { MAKELONG(0, 0), ID_MAIN_WINDOW_MENU_FILE_OPEN, TBSTATE_ENABLED, BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)TEXT("Open") },
-                        { MAKELONG(1, 0), ID_MAIN_WINDOW_MENU_FILE_SAVE, TBSTATE_ENABLED, BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)TEXT("Save") }
+                        { MAKELONG(STD_FILEOPEN, 0), ID_MAIN_WINDOW_MENU_FILE_OPEN, TBSTATE_ENABLED, BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)TEXT("Open") },
+                        { MAKELONG(STD_FILESAVE, 0), ID_MAIN_WINDOW_MENU_FILE_SAVE, TBSTATE_ENABLED, BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)TEXT("Save") }
                     };
 
                     SendMessage(main_window.toolbar, TB_ADDBUTTONS, (WPARAM)2, (LPARAM)&buttons);
+                    SendMessage(main_window.toolbar, TB_AUTOSIZE, 0, 0);
                 }
             }
             return 0;
@@ -331,9 +324,9 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
             }
 
             if (!MoveWindow(window,
-                0, main_window.ribbon_height + toolbar_height,
-                main_window.size.x, main_window.size.y - main_window.ribbon_height - toolbar_height,
-                FALSE)) {
+                            0, main_window.ribbon_height + toolbar_height,
+                            main_window.size.x, main_window.size.y - main_window.ribbon_height - toolbar_height,
+                            FALSE)) {
                 WINDOWS_HELPER_warning(TEXT("Failed to resize."));
             }
 

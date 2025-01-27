@@ -49,7 +49,7 @@ void WINDOWS_HELPER_set_types(void) {
                 major = LOBYTE(loword),
                 minor = HIBYTE(loword);
 
-    if (major <= 2 || major == 4) {
+    if (major <= 2 || major == 4 || (major == 5 && minor == 0)) {
         WINDOWS_HELPER_document_type = SDI;
     } else if ((major == 5 && minor >= 1) || major >= 6) {
         WINDOWS_HELPER_document_type = TDI;
