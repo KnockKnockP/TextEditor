@@ -42,6 +42,7 @@ extern LPCTSTR pTextbox_registered_class_name;
 
 TEXTBOX *TEXTBOX_create(const HWND parent,
                         const XY size,
+                        const int vertical_offset,
                         WIDE_STRING *pFont_file,
                         WIDE_STRING *pFont_name);
 void TEXTBOX_set_file(TEXTBOX *pTextbox, const TEXT_FILE text_file);
@@ -49,6 +50,9 @@ TEXTBOX *TEXTBOX_find_by_HWND(const HWND hwnd);
 void TEXTBOX_request_redraw(const TEXTBOX *pTextbox);
 void TEXTBOX_mdi_redraw(void);
 void TEXTBOX_set_caret_position(TEXTBOX *pTextbox, int x, int y);
+TEXTBOX *TEXTBOX_tdi_find(const int index);
+void TEXTBOX_tdi_select(const int index);
+int TEXTBOX_tdi_size(void);
 
 #ifndef UNICODE
 void TEXTBOX_reset_multibyte_buffer(TEXTBOX *pTextbox);

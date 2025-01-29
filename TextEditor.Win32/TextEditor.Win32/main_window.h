@@ -6,9 +6,9 @@
 #include <textbox.h>
 
 typedef struct _MAIN_WINDOW {
-    HWND hwnd, mdi, toolbar;
+    HWND hwnd, mdi, toolbar, tdi;
     LONG_PTR mdi_callback, toolbar_callback;
-    XY size;
+    XY size, tdi_size;
 
     TEXTBOX *pSdi;
     WIDE_STRING font_file, font_name;
@@ -16,7 +16,7 @@ typedef struct _MAIN_WINDOW {
     IUIFramework *pFramework;
     IUIApplication *pApplication;
     IUICommandHandler *pCommand_handler;
-    UINT32 ribbon_height;
+    UINT32 ribbon_height, tdi_strip_height;
 } MAIN_WINDOW;
 
 extern MAIN_WINDOW main_window;

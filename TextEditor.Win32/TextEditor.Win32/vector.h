@@ -12,7 +12,7 @@
 #ifndef VECTOR_DECLARATION
 #define VECTOR_DECLARATION(type) \
 typedef struct VECTOR_NAME(type) { \
-    size_t size; \
+    int size; \
     type *pArray; \
 } VECTOR_NAME(type)
 #endif
@@ -29,8 +29,16 @@ typedef struct VECTOR_NAME(type) { \
 #define VECTOR_PUSH_DECLARATION(type) void VECTOR_PUSH_##type(VECTOR_NAME(type) *pVector, const type element)
 #endif
 
+#ifndef VECTOR_FIND_DECLARATION
+#define VECTOR_FIND_DECLARATION(type) int VECTOR_FIND_##type(VECTOR_NAME(type) *pVector, const type element)
+#endif
+
 #ifndef VECTOR_FIND_AND_REPLACE_DECLARATION
 #define VECTOR_FIND_AND_REPLACE_DECLARATION(type) void VECTOR_FIND_AND_REPLACE_##type(VECTOR_NAME(type) *pVector, const type element, const type new_value)
+#endif
+
+#ifndef VECTOR_REMOVE_DECLARATION
+#define VECTOR_REMOVE_DECLARATION(type) void VECTOR_REMOVE_##type(VECTOR_NAME(type) *pVector, const int index)
 #endif
 
 #ifndef VECTOR_POP_DECLARATION
@@ -51,8 +59,10 @@ VECTOR_DECLARATION(type); \
 VECTOR_CREATE_DECLARATION(type); \
 VECTOR_INITIALIZE_DECLARATION(type); \
 VECTOR_PUSH_DECLARATION(type); \
+VECTOR_FIND_DECLARATION(type); \
 VECTOR_FIND_AND_REPLACE_DECLARATION(type); \
 VECTOR_POP_DECLARATION(type); \
+VECTOR_REMOVE_DECLARATION(type); \
 VECTOR_CLEAR_DECLARATION(type); \
 VECTOR_DESTROY_DECLARATION(type)
 #endif
@@ -95,13 +105,27 @@ void VECTOR_PUSH_##type(VECTOR_NAME(type) *pVector, const type element) { \
 }
 #endif
 
+#ifndef VECTOR_FIND_IMPLEMENTATION
+#define VECTOR_FIND_IMPLEMENTATION(type) int VECTOR_FIND_##type(VECTOR_NAME(type) *pVector, const type element) { \
+    if (!pVector->pArray) { \
+        return -1; \
+    } \
+    for (int i = 0; i < pVector->size; ++i) { \
+        if (pVector->pArray[i] == element) { \
+            return i; \
+        } \
+    } \
+    return -1; \
+}
+#endif
+
 #ifndef VECTOR_FIND_AND_REPLACE_IMPLEMENTATION
 #define VECTOR_FIND_AND_REPLACE_IMPLEMENTATION(type) \
 void VECTOR_FIND_AND_REPLACE_##type(VECTOR_NAME(type) *pVector, const type element, const type new_value) { \
     if (!pVector->pArray) { \
         return; \
     } \
-    for (size_t i = 0; i < pVector->size; ++i) { \
+    for (int i = 0; i < pVector->size; ++i) { \
         if (pVector->pArray[i] == element) { \
             pVector->pArray[i] = new_value; \
             break; \
@@ -130,6 +154,27 @@ void VECTOR_POP_##type(VECTOR_NAME(type) *pVector) { \
 }
 #endif
 
+#ifndef VECTOR_REMOVE_IMPLEMENTATION
+#define VECTOR_REMOVE_IMPLEMENTATION(type) \
+void VECTOR_REMOVE_##type(VECTOR_NAME(type) *pVector, const int index) { \
+    if (!pVector->pArray) { \
+        return; \
+    } \
+    type *pTemporary = malloc(sizeof(type) * (pVector->size - 1)); \
+    if (!pTemporary) { \
+        return; \
+    } \
+    for (int i = 0; i < index; ++i) { \
+        pTemporary[i] = pVector->pArray[i]; \
+    } \
+    for (int i = index + 1; i < pVector->size; ++i) { \
+        pTemporary[i] = pVector->pArray[i]; \
+    } \
+    --pVector->size; \
+    pVector->pArray = pTemporary; \
+}
+#endif
+
 #ifndef VECTOR_CLEAR_IMPLEMENTATION
 #define VECTOR_CLEAR_IMPLEMENTATION(type) \
 void VECTOR_CLEAR_##type(VECTOR_NAME(type) *pVector) { \
@@ -150,8 +195,10 @@ void VECTOR_DESTROY_##type(VECTOR_NAME(type) *pVector) { \
 VECTOR_CREATE_IMPLEMENTATION(type) \
 VECTOR_INITIALIZE_IMPLEMENTATION(type) \
 VECTOR_PUSH_IMPLEMENTATION(type) \
+VECTOR_FIND_IMPLEMENTATION(type) \
 VECTOR_FIND_AND_REPLACE_IMPLEMENTATION(type) \
 VECTOR_POP_IMPLEMENTATION(type) \
+VECTOR_REMOVE_IMPLEMENTATION(type) \
 VECTOR_CLEAR_IMPLEMENTATION(type) \
 VECTOR_DESTROY_IMPLEMENTATION(type)
 #endif

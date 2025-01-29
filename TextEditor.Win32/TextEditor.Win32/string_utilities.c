@@ -188,7 +188,7 @@ size_t STRING_UTILITIES_characters(LPCTSTR pString) {
 }
 
 static void WIDE_STRING_update_individual_lines(WIDE_STRING *pWide_string) {
-    for (size_t i = 0; i < pWide_string->individual_lines.size; ++i) {
+    for (int i = 0; i < pWide_string->individual_lines.size; ++i) {
         MEMORY_HELPER_free((void **)&pWide_string->individual_lines.pArray[i]);
     }
     VECTOR_CLEAR_LPWSTR(&pWide_string->individual_lines);
@@ -521,7 +521,7 @@ void WIDE_STRING_remove_character_at_line(WIDE_STRING *pOriginal, const size_t l
 
 void WIDE_STRING_consolidate_individual_lines(WIDE_STRING *pWide_string) {
     size_t characters = 0;
-    for (size_t i = 0; i < pWide_string->individual_lines.size; ++i) {
+    for (int i = 0; i < pWide_string->individual_lines.size; ++i) {
         characters += wcslen(pWide_string->individual_lines.pArray[i]) + 1;
     }
 
@@ -532,7 +532,7 @@ void WIDE_STRING_consolidate_individual_lines(WIDE_STRING *pWide_string) {
     }
     pNew[0] = L'\0';
 
-    for (size_t i = 0; i < pWide_string->individual_lines.size; ++i) {
+    for (int i = 0; i < pWide_string->individual_lines.size; ++i) {
         wcscat(pNew, pWide_string->individual_lines.pArray[i]);
 
         if (i != pWide_string->individual_lines.size - 1) {
@@ -548,7 +548,7 @@ void WIDE_STRING_consolidate_individual_lines(WIDE_STRING *pWide_string) {
 void WIDE_STRING_destroy(WIDE_STRING *pWide_string) {
     MEMORY_HELPER_free((void **)&pWide_string->pWide_string);
 
-    for (size_t i = 0; i < pWide_string->individual_lines.size; ++i) {
+    for (int i = 0; i < pWide_string->individual_lines.size; ++i) {
         MEMORY_HELPER_free((void **)&pWide_string->individual_lines.pArray[i]);
     }
     VECTOR_DESTROY_LPWSTR(&pWide_string->individual_lines);

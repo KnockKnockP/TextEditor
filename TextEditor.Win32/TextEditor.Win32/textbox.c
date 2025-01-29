@@ -1,7 +1,6 @@
 #include <leak_checker.h>
 
 #include <textbox.h>
-#include <stdio.h>
 #include <commctrl.h>
 #include <resource.h>
 #include <main_window.h>
@@ -15,7 +14,6 @@ static ATOM_WRAPPER registered_class = { 0 };
 LPCTSTR pTextbox_registered_class_name = NULL;
 
 static TEXTBOX *pBeing_created = NULL;
-static size_t textboxes_count = 0;
 static VECTOR_PTEXTBOX textboxes = { 0 };
 
 void TEXT_FILE_destroy(TEXT_FILE *pText_file) {
@@ -114,6 +112,10 @@ static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, 
             }
             return 0;
         }
+
+        case WM_LBUTTONDOWN:
+            SetFocus(hwnd);
+            return 0;
 
         case WM_SETFOCUS: {
             TEXTBOX *pTextbox = TEXTBOX_find_by_HWND(hwnd);
@@ -333,7 +335,7 @@ static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, 
 
             SetTextColor(hdc, text_color);
             SetBkColor(hdc, text_background_color);
-            for (size_t i = 0; i < pTextbox->file.text.individual_lines.size; ++i) {
+            for (int i = 0; i < pTextbox->file.text.individual_lines.size; ++i) {
                 WIDE_STRING pLine = { 0 };
 
                 BOOL is_IME_line = pTextbox->ime.pWide_string && (int)i == pTextbox->caret.y;
@@ -408,11 +410,9 @@ static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, 
             DestroyCaret();
 
             if (textboxes.pArray) {
-                VECTOR_FIND_AND_REPLACE_PTEXTBOX(&textboxes, pTextbox, NULL);
-                --textboxes_count;
                 MEMORY_HELPER_free((void **)&pTextbox);
 
-                if (!textboxes_count) {
+                if (!textboxes.size) {
                     MEMORY_HELPER_free((void **)&pTextbox_registered_class_name);
                     VECTOR_DESTROY_PTEXTBOX(&textboxes);
                 }
@@ -430,6 +430,7 @@ static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, 
 
 TEXTBOX *TEXTBOX_create(const HWND parent,                    
                         const XY size,
+                        const int vertical_offset,
                         WIDE_STRING *pFont_file,
                         WIDE_STRING *pFont_name) {
     TEXTBOX *pTextbox = malloc(sizeof(TEXTBOX));
@@ -472,11 +473,11 @@ TEXTBOX *TEXTBOX_create(const HWND parent,
 
     pBeing_created = pTextbox;
 
-    if (WINDOWS_HELPER_document_type == SDI) {
+    if (WINDOWS_HELPER_document_type != MDI) {
         pTextbox->hwnd = CreateWindow(pTextbox_registered_class_name,
                                       NULL,
                                       WS_CHILD | WS_VISIBLE,
-                                      0, 0,
+                                      0, vertical_offset,
                                       pTextbox->size.x, pTextbox->size.y,
                                       parent, NULL, NULL, NULL);
         if (!pTextbox->hwnd) {
@@ -488,12 +489,12 @@ TEXTBOX *TEXTBOX_create(const HWND parent,
         textboxes = VECTOR_CREATE_PTEXTBOX();
     }
     VECTOR_PUSH_PTEXTBOX(&textboxes, pTextbox);
-    ++textboxes_count;
+    //++textboxes_count;
     return pTextbox;
 }
 
 TEXTBOX *TEXTBOX_find_by_HWND(const HWND hwnd) {
-    for (size_t i = 0; i < textboxes.size; ++i) {
+    for (int i = 0; i < textboxes.size; ++i) {
         if (textboxes.pArray[i] && textboxes.pArray[i]->hwnd == hwnd) {
             return textboxes.pArray[i];
         }
@@ -519,7 +520,7 @@ void TEXTBOX_request_redraw(const TEXTBOX *pTextbox) {
 }
 
 void TEXTBOX_mdi_redraw(void) {
-    for (size_t i = 0; i < textboxes.size; ++i) {
+    for (int i = 0; i < textboxes.size; ++i) {
         const TEXTBOX *pTextbox = textboxes.pArray[i];
         if (pTextbox) {
             SetWindowPos(pTextbox->hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_DRAWFRAME);
@@ -547,6 +548,27 @@ void TEXTBOX_set_caret_position(TEXTBOX *pTextbox, int x, int y) {
 
     pTextbox->caret.x = x;
     pTextbox->caret.y = y;
+}
+
+TEXTBOX *TEXTBOX_tdi_find(const int index) {
+    return textboxes.pArray[index];
+}
+
+void TEXTBOX_tdi_select(const int index) {
+    for (int i = 0; i < textboxes.size; ++i) {
+        ShowWindow(textboxes.pArray[i]->hwnd, SW_HIDE);
+    }
+
+    const HWND selected = textboxes.pArray[index]->hwnd;
+    ShowWindow(selected, SW_SHOW);
+}
+
+int TEXTBOX_tdi_size(void) {
+    int size = 0;
+    if (textboxes.pArray) {
+        size = textboxes.size;
+    }
+    return size;
 }
 
 #ifndef UNICODE

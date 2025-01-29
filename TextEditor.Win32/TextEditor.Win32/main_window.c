@@ -153,7 +153,7 @@ IUIApplicationVtbl ribbon_table = {
 };
 
 static TEXTBOX *MAIN_WINDOW_create_mdi_child(void) {
-    TEXTBOX *pTextbox = TEXTBOX_create(main_window.hwnd, main_window.size, &main_window.font_file, &main_window.font_name);
+    TEXTBOX *pTextbox = TEXTBOX_create(main_window.hwnd, main_window.size, 0, &main_window.font_file, &main_window.font_name);
 
     MDICREATESTRUCT mdi_create_struct = { 0 };
     mdi_create_struct.szClass = pTextbox_registered_class_name;
@@ -202,31 +202,52 @@ static void send_message_to_mdi(const UINT uMsg, const WPARAM wParam, const LPAR
     }
 }
 
+static void MAIN_WINDOW_add_tdi_entry(const LPTSTR name, const int index) {
+    TCITEM tab_item = { 0 };
+    tab_item.mask = TCIF_TEXT;
+    tab_item.pszText = name;
+    tab_item.cchTextMax = STRING_UTILITIES_characters(name);
+    tab_item.iImage = -1;
+    TabCtrl_InsertItem(main_window.tdi, index, &tab_item);
+}
+
+static void MAIN_WINDOW_update_tdi_strip_height(void) {
+    MAIN_WINDOW_add_tdi_entry(TEXT(""), 0);
+
+    RECT size = { 0 };
+    TabCtrl_GetItemRect(main_window.tdi, 0, &size);
+    main_window.tdi_strip_height = size.top + size.bottom;
+
+    TabCtrl_DeleteItem(main_window.tdi, 0);
+}
+
+static void MAIN_WINDOW_tdi_select(const int index) {
+    TabCtrl_SetCurSel(main_window.tdi, index);
+    TEXTBOX_tdi_select(index);
+    main_window.pSdi = TEXTBOX_tdi_find(index);
+}
+
+static void MAIN_WINDOW_create_tdi_child(const LPTSTR name) {
+    const int index = TEXTBOX_tdi_size();
+    MAIN_WINDOW_add_tdi_entry(name, index);
+
+    TEXTBOX_create(main_window.tdi, main_window.tdi_size, main_window.tdi_strip_height, &main_window.font_file, &main_window.font_name);
+    MAIN_WINDOW_tdi_select(index);
+}
+
 LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE: {
             main_window.hwnd = hwnd;
 
-            if (WINDOWS_HELPER_document_type == MDI) {
-                CLIENTCREATESTRUCT client_create_struct = { 0 };
-                main_window.mdi = CreateWindow(TEXT("MDICLIENT"), NULL,
-                                               WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
-                                               0, 0, main_window.size.x, main_window.size.y,
-                                               hwnd, NULL, NULL, &client_create_struct);
-
-                main_window.mdi_callback = SetWindowLongPtr(main_window.mdi, GWLP_WNDPROC, (LONG)MAIN_WINDOW_MDI_DefWindowProc);
-                MAIN_WINDOW_create_mdi_child();
-            } else if (WINDOWS_HELPER_document_type == SDI) {
-                main_window.pSdi = TEXTBOX_create(hwnd, main_window.size, &main_window.font_file, &main_window.font_name);
-            }
-
+            const HINSTANCE instance = GetModuleHandle(NULL);
             BOOL ribbon_exists = FALSE;
 #ifdef USE_RIBBON
             CoCreateInstance(&CLSID_UIRibbonFramework,
-                             NULL,
-                             CLSCTX_INPROC_SERVER,
-                             &IID_IUIFramework,
-                             (void **)&main_window.pFramework);
+                NULL,
+                CLSCTX_INPROC_SERVER,
+                &IID_IUIFramework,
+                (void**)&main_window.pFramework);
             if (!main_window.pFramework) {
                 goto after_ribbon;
             }
@@ -236,7 +257,7 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                 goto after_ribbon;
             }
             main_window.pApplication->lpVtbl = &ribbon_table;
-            main_window.pApplication->lpVtbl->QueryInterface(main_window.pApplication, &IID_IUIApplication, (void **)&main_window.pApplication);
+            main_window.pApplication->lpVtbl->QueryInterface(main_window.pApplication, &IID_IUIApplication, (void**)&main_window.pApplication);
 
             main_window.pFramework->lpVtbl->Initialize(main_window.pFramework, hwnd, main_window.pApplication);
             main_window.pFramework->lpVtbl->LoadUI(main_window.pFramework, GetModuleHandle(NULL), L"APPLICATION_RIBBON");
@@ -245,10 +266,9 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
 
         after_ribbon:
             if (!ribbon_exists) {
-                const HINSTANCE instance = GetModuleHandle(NULL);
                 main_window.toolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
-                                                     WS_CHILD | WS_VISIBLE | TBSTYLE_WRAPABLE,
-                                                     0, 0, 0, 0, hwnd, NULL, instance, NULL);
+                    WS_CHILD | WS_VISIBLE | TBSTYLE_WRAPABLE,
+                    0, 0, 0, 0, hwnd, NULL, instance, NULL);
                 if (main_window.toolbar) {
                     const TBADDBITMAP bitmap = { HINST_COMMCTRL, IDB_STD_SMALL_COLOR };
                     SendMessage(main_window.toolbar, TB_ADDBITMAP, 2, (LPARAM)&bitmap);
@@ -262,6 +282,40 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                     SendMessage(main_window.toolbar, TB_ADDBUTTONS, (WPARAM)2, (LPARAM)&buttons);
                     SendMessage(main_window.toolbar, TB_AUTOSIZE, 0, 0);
                 }
+            }
+
+            if (WINDOWS_HELPER_document_type == MDI) {
+                CLIENTCREATESTRUCT client_create_struct = { 0 };
+                main_window.mdi = CreateWindow(TEXT("MDICLIENT"), NULL,
+                                               WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
+                                               0, 0, main_window.size.x, main_window.size.y,
+                                               hwnd, NULL, NULL, &client_create_struct);
+
+                main_window.mdi_callback = SetWindowLongPtr(main_window.mdi, GWLP_WNDPROC, (LONG)MAIN_WINDOW_MDI_DefWindowProc);
+                MAIN_WINDOW_create_mdi_child();
+            } else if (WINDOWS_HELPER_document_type == SDI) {
+                main_window.pSdi = TEXTBOX_create(hwnd, main_window.size, 0, &main_window.font_file, &main_window.font_name);
+            } else {
+                RECT parent_size = { 0 }, menu_size = { 0 };
+                GetClientRect(hwnd, &parent_size);
+                if (ribbon_exists) {
+                    //
+                } else {
+                    GetClientRect(main_window.toolbar, &menu_size);
+                }
+                parent_size.bottom -= menu_size.bottom;
+
+                main_window.tdi = CreateWindow(WC_TABCONTROL, TEXT(""), WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE,
+                                               0, menu_size.bottom, parent_size.right, parent_size.bottom,
+                                               hwnd, NULL, instance, NULL);
+
+                MAIN_WINDOW_update_tdi_strip_height();
+                XY tdi_size = { 0 };
+                tdi_size.x = parent_size.right;
+                tdi_size.y = parent_size.bottom - main_window.tdi_strip_height;
+                main_window.tdi_size = tdi_size;
+
+                MAIN_WINDOW_create_tdi_child(TEXT("Untitled"));
             }
             return 0;
         }
@@ -313,11 +367,16 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                 RECT toolbar_rect = { 0 };
                 GetWindowRect(main_window.toolbar, &toolbar_rect);
                 toolbar_height = toolbar_rect.bottom - toolbar_rect.top;
+
+                MoveWindow(main_window.toolbar, 0, 0, main_window.size.x, toolbar_height, TRUE);
             }
 
             HWND window = main_window.mdi;
             if (main_window.pSdi) {
                 window = main_window.pSdi->hwnd;
+            }
+            if (main_window.tdi) {
+                window = main_window.tdi;
             }
             if (!window) {
                 break;
@@ -334,7 +393,22 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
             if (main_window.mdi) {
                 TEXTBOX_mdi_redraw();
             }
+            if (main_window.tdi) {
+                //SetWindowPos(TEXTBOX_find_tdi(0)->hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_DRAWFRAME);
+            }
             return 0;
+        }
+
+        case WM_NOTIFY: {
+            const LPNMHDR nmhdr = (LPNMHDR)lParam;
+
+            if (nmhdr->hwndFrom == main_window.tdi) {
+                if (nmhdr->code == TCN_SELCHANGING) {
+                    MAIN_WINDOW_tdi_select(TEXTBOX_tdi_size() - TabCtrl_GetCurSel(main_window.tdi) - 1);
+                    return FALSE;
+                }
+            }
+            break;
         }
 
         case WM_CLOSE: {
@@ -378,12 +452,14 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
 
 void MAIN_WINDOW_initialize(void) {
     main_window.hwnd = NULL;
+    main_window.tdi = NULL;
 
     main_window.mdi_callback = (LONG_PTR)NULL;
     main_window.toolbar_callback = (LONG_PTR)NULL;
 
     XY size = { 0 };
     main_window.size = size;
+    main_window.tdi_size = size;
 
     main_window.pSdi = NULL;
     main_window.font_file = WIDE_STRING_create_w(L"unifont-15.1.05.otf");
@@ -393,6 +469,7 @@ void MAIN_WINDOW_initialize(void) {
     main_window.pApplication = NULL;
     main_window.pCommand_handler = NULL;
     main_window.ribbon_height = 0;
+    main_window.tdi_strip_height = 0;
 
     ATOM_WRAPPER main_window_class = { 0 };
     WIDE_STRING main_window_class_name = WIDE_STRING_create_w(L"Text Editor"),
@@ -460,6 +537,9 @@ void MAIN_WINDOW_open_file(void) {
         TEXTBOX *pTextbox = main_window.pSdi;
         if (WINDOWS_HELPER_document_type == MDI) {
             pTextbox = MAIN_WINDOW_create_mdi_child();
+        } else if (WINDOWS_HELPER_document_type == TDI) {
+            MAIN_WINDOW_create_tdi_child(TEXT("NEW WINDOW"));
+            pTextbox = main_window.pSdi;
         }
         TEXTBOX_set_file(pTextbox, text_file);
 
