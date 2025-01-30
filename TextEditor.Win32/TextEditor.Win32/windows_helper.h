@@ -59,7 +59,7 @@ WINDOWS_HELPER_GET_FUNCTION_DECLARATION(DwmGetColorizationColor);
 void WINDOWS_HELPER_set_types(void);
 
 BOOL WINDOWS_HELPER_file_exists(LPCTSTR file);
-HANDLE WINDOWS_HELPER_file_dialog(const HWND owner, const BOOL is_open);
+HANDLE WINDOWS_HELPER_file_dialog(const HWND owner, const BOOL is_open, WIDE_STRING *pFile_name);
 
 void WINDOWS_HELPER_warning(LPCTSTR pContents);
 

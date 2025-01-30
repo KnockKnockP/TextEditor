@@ -9,7 +9,7 @@
 #include <string_utilities.h>
 
 typedef struct _TEXT_FILE {
-    WIDE_STRING text;
+    WIDE_STRING name, text;
     int encoding;
 } TEXT_FILE;
 

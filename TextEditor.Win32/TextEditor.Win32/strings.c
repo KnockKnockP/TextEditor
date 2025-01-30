@@ -17,6 +17,8 @@ LPCWSTR STRINGS_##name(void) { \
 LOCALE_DOUBLE locale = EN_US;
 
 IMPLEMENT_STRING(MAIN_WINDOW_TITLE, L"Text Editor", L"문서 편집기")
+IMPLEMENT_STRING(UNTITLED, L"Untitled", L"무제");
+IMPLEMENT_STRING(ENCODING, L"Encoding", L"인코딩");
 
 void STRINGS_initialize(void) {
     int characters = GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_SLANGUAGE, NULL, 0);

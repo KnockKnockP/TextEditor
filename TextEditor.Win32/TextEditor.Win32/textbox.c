@@ -1,5 +1,7 @@
 #include <leak_checker.h>
 
+#include <strings.h>
+//#include <vsstyle.h>
 #include <textbox.h>
 #include <commctrl.h>
 #include <resource.h>
@@ -17,6 +19,7 @@ static TEXTBOX *pBeing_created = NULL;
 static VECTOR_PTEXTBOX textboxes = { 0 };
 
 void TEXT_FILE_destroy(TEXT_FILE *pText_file) {
+    WIDE_STRING_destroy(&pText_file->name);
     WIDE_STRING_destroy(&pText_file->text);
 }
 
@@ -28,7 +31,8 @@ static void TEXTBOX_CreateCaret(const TEXTBOX *pTextbox) {
 }
 
 static LPCTSTR TEXTBOX_get_encoding_string(const int encoding_enum) {
-    WIDE_STRING encoding = WIDE_STRING_create_w(L"Encoding: ");
+    WIDE_STRING encoding = WIDE_STRING_create_w(STRINGS_ENCODING());
+    WIDE_STRING_append_string(&encoding, TEXT(": "));
     WIDE_STRING_append_string(&encoding, STRING_UTILITIES_encoding_enum_to_string(encoding_enum));
     
     LPCTSTR encoding_string = WIDE_STRING_get_t_string(&encoding);
@@ -70,11 +74,19 @@ static void TEXTBOX_set_caret_position_in_pixels(TEXTBOX *pTextbox, const HDC hd
     MEMORY_HELPER_free((void **)&caret_line_t);
 }
 
+static void TEXTBOX_update_title(TEXTBOX *pTextbox) {
+    LPCTSTR pFile_name_t = WIDE_STRING_get_t_string(&pTextbox->file.name);
+    SetWindowText(pTextbox->hwnd, pFile_name_t);
+    MEMORY_HELPER_free((void **)&pFile_name_t);
+}
+
 static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE: {
             TEXTBOX *pTextbox = pBeing_created;
             pTextbox->hwnd = hwnd;
+
+            TEXTBOX_update_title(pTextbox);
             
             if (AddFontResourceEx_saved) {
                 pTextbox->font.pFont_file_t = WIDE_STRING_get_t_string(pTextbox->font.pFont_file);
@@ -373,6 +385,7 @@ static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, 
             if (pTextbox->focus) {
                 SetCaretPos(pTextbox->caret_pixels.x, pTextbox->caret_pixels.y);
             }
+
             EndPaint(hwnd, &paint_struct);
             break;
         }
@@ -447,6 +460,7 @@ TEXTBOX *TEXTBOX_create(const HWND parent,
     pTextbox->caret_pixels = caret_position;
 
     TEXT_FILE text_file = { 0 };
+    text_file.name = WIDE_STRING_create_w(STRINGS_UNTITLED());
     text_file.text = WIDE_STRING_create_empty();
     text_file.encoding = WIDE;
     pTextbox->file = text_file;
@@ -489,7 +503,6 @@ TEXTBOX *TEXTBOX_create(const HWND parent,
         textboxes = VECTOR_CREATE_PTEXTBOX();
     }
     VECTOR_PUSH_PTEXTBOX(&textboxes, pTextbox);
-    //++textboxes_count;
     return pTextbox;
 }
 
@@ -512,6 +525,7 @@ void TEXTBOX_set_file(TEXTBOX *pTextbox, const TEXT_FILE text_file) {
     SendMessage(pTextbox->status_bar_hwnd, SB_SETTEXT, wParam, (LPARAM)encoding_string);
     MEMORY_HELPER_free((void **)&encoding_string);
 
+    TEXTBOX_update_title(pTextbox);
     TEXTBOX_request_redraw(pTextbox);
 }
 

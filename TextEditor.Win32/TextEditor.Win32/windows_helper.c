@@ -1,8 +1,8 @@
 #include <leak_checker.h>
 
-#include <windows_helper.h>
 #include <resource.h>
 #include <memory_helper.h>
+#include <windows_helper.h>
 
 #ifndef WINDOWS_HELPER_EXPAND
 #define WINDOWS_HELPER_EXPAND(macro) #macro
@@ -69,13 +69,13 @@ BOOL WINDOWS_HELPER_file_exists(LPCTSTR file) {
     return (attributes != INVALID_FILE_ATTRIBUTES && !(attributes & FILE_ATTRIBUTE_DIRECTORY));
 }
 
-HANDLE WINDOWS_HELPER_file_dialog(const HWND owner, const BOOL is_open) {
+HANDLE WINDOWS_HELPER_file_dialog(const HWND owner, const BOOL is_open, WIDE_STRING *pFile_name) {
     const DWORD size = sizeof(TCHAR) * 32767;
-    LPTSTR pFile_name = malloc(size);
-    if (!pFile_name) {
+    LPTSTR pFile_name_t = malloc(size);
+    if (!pFile_name_t) {
         return INVALID_HANDLE_VALUE;
     }
-    memset(pFile_name, 0, size);
+    memset(pFile_name_t, 0, size);
 
     if (!is_open) {
         const TCHAR default_name[] = TEXT("*.txt");
@@ -87,7 +87,7 @@ HANDLE WINDOWS_HELPER_file_dialog(const HWND owner, const BOOL is_open) {
     open_file_name.hwndOwner = owner;
     open_file_name.lpstrFilter = TEXT("Text Files (.txt)\0*.txt\0All Files\0*.*\0\0");
     open_file_name.nFilterIndex = 1;
-    open_file_name.lpstrFile = pFile_name;
+    open_file_name.lpstrFile = pFile_name_t;
     open_file_name.nMaxFile = size;
     open_file_name.Flags = OFN_CREATEPROMPT | OFN_OVERWRITEPROMPT;
 
@@ -114,9 +114,12 @@ HANDLE WINDOWS_HELPER_file_dialog(const HWND owner, const BOOL is_open) {
                           create_type,
                           FILE_ATTRIBUTE_NORMAL,
                           NULL);
+
+        *pFile_name = WIDE_STRING_create(pFile_name_t);
+        WIDE_STRING_extract_file_name_from_path(pFile_name);
     }
 
-    MEMORY_HELPER_free((void **)&pFile_name);
+    MEMORY_HELPER_free((void **)&pFile_name_t);
     return file;
 }
 

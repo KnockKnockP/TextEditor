@@ -46,7 +46,7 @@ WinMain
  
     //WINDOWS_HELPER_document_type = MDI;
     //WINDOWS_HELPER_document_type = SDI;
-    WINDOWS_HELPER_document_type = TDI;
+    //WINDOWS_HELPER_document_type = TDI;
 
     MAIN_WINDOW_initialize();
     MSG msg = { 0 };

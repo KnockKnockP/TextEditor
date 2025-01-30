@@ -57,6 +57,7 @@ void WIDE_STRING_append_string_at_line(WIDE_STRING *pOriginal, LPCTSTR pAddition
 void WIDE_STRING_remove_character_at_line(WIDE_STRING *pOriginal, const size_t line, const size_t at);
 
 void WIDE_STRING_consolidate_individual_lines(WIDE_STRING *pWide_string);
+void WIDE_STRING_extract_file_name_from_path(WIDE_STRING *pWide_string);
 
 void WIDE_STRING_destroy(WIDE_STRING *pWide_string);
 #endif

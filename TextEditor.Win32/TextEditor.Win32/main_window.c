@@ -267,8 +267,8 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
         after_ribbon:
             if (!ribbon_exists) {
                 main_window.toolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
-                    WS_CHILD | WS_VISIBLE | TBSTYLE_WRAPABLE,
-                    0, 0, 0, 0, hwnd, NULL, instance, NULL);
+                                                     WS_CHILD | WS_VISIBLE | TBSTYLE_WRAPABLE,
+                                                     0, 0, 0, 0, hwnd, NULL, instance, NULL);
                 if (main_window.toolbar) {
                     const TBADDBITMAP bitmap = { HINST_COMMCTRL, IDB_STD_SMALL_COLOR };
                     SendMessage(main_window.toolbar, TB_ADDBITMAP, 2, (LPARAM)&bitmap);
@@ -315,7 +315,11 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                 tdi_size.y = parent_size.bottom - main_window.tdi_strip_height;
                 main_window.tdi_size = tdi_size;
 
-                MAIN_WINDOW_create_tdi_child(TEXT("Untitled"));
+                WIDE_STRING untitled = WIDE_STRING_create_w(STRINGS_UNTITLED());
+                LPCTSTR pUntitled_t = WIDE_STRING_get_t_string(&untitled);
+                MAIN_WINDOW_create_tdi_child((const LPTSTR)pUntitled_t);
+                MEMORY_HELPER_free((void **)&pUntitled_t);
+                WIDE_STRING_destroy(&untitled);
             }
             return 0;
         }
@@ -398,6 +402,12 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
             }
             return 0;
         }
+
+        case WM_SYSCOLORCHANGE:
+            if (main_window.toolbar) {
+                SendMessage(main_window.toolbar, WM_SYSCOLORCHANGE, 0, 0);
+            }
+            break;
 
         case WM_NOTIFY: {
             const LPNMHDR nmhdr = (LPNMHDR)lParam;
@@ -502,7 +512,8 @@ void MAIN_WINDOW_initialize(void) {
 }
 
 void MAIN_WINDOW_open_file(void) {
-    HANDLE file = WINDOWS_HELPER_file_dialog(main_window.hwnd, TRUE);
+    WIDE_STRING file_name = { 0 };
+    HANDLE file = WINDOWS_HELPER_file_dialog(main_window.hwnd, TRUE, &file_name);
     if (file != INVALID_HANDLE_VALUE) {
         size_t file_size = GetFileSize(file, NULL);
         BYTE *pBytes = malloc(sizeof(BYTE) * (file_size + sizeof(WCHAR)));
@@ -519,6 +530,7 @@ void MAIN_WINDOW_open_file(void) {
         pBytes[bytes_read_number] = '\0';
 
         TEXT_FILE text_file = { 0 };
+        text_file.name = file_name;
         text_file.encoding = STRING_UTILITIES_detect_encoding(pBytes, bytes_read_number);
         if (text_file.encoding == ANSI) {
             text_file.text = WIDE_STRING_create_a((LPCSTR)pBytes);
@@ -555,7 +567,8 @@ void MAIN_WINDOW_save_file(void) {
         pTextbox = TEXTBOX_find_by_HWND((HWND)SendMessage(main_window.mdi, WM_MDIGETACTIVE, 0, 0));
     }
 
-    HANDLE file = WINDOWS_HELPER_file_dialog(main_window.hwnd, FALSE);
+    WIDE_STRING file_name = { 0 };
+    HANDLE file = WINDOWS_HELPER_file_dialog(main_window.hwnd, FALSE, &file_name);
     if (file != INVALID_HANDLE_VALUE) {
         const BYTE UTF_16_LE_BOM[2] = { 0xFF, 0xFE };
         DWORD bytes_written = 0;

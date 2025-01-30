@@ -545,11 +545,49 @@ void WIDE_STRING_consolidate_individual_lines(WIDE_STRING *pWide_string) {
     WIDE_STRING_update_individual_lines(pWide_string);
 }
 
+void WIDE_STRING_extract_file_name_from_path(WIDE_STRING *pWide_string) {
+    const size_t characters = wcslen(pWide_string->pWide_string);
+    size_t last_slash = 0;
+
+    for (size_t i = 0; i < characters; ++i) {
+        if (pWide_string->pWide_string[i] == '\\') {
+            last_slash = i;
+        }
+    }
+
+    LPWSTR pString = NULL;
+    const size_t file_name_characters = characters - last_slash - 1;
+    if (!file_name_characters) {
+        pString = L"";
+        goto apply;
+    }
+
+    pString = malloc(sizeof(WCHAR) * (file_name_characters + 1));
+    if (!pString) {
+        WINDOWS_HELPER_THROW();
+        return;
+    }
+    pString[file_name_characters] = TEXT('\0');
+
+    for (size_t i = last_slash + 1, j = 0; i < characters; ++i, ++j) {
+        pString[j] = pWide_string->pWide_string[i];
+    }
+
+apply:
+    MEMORY_HELPER_free((void **)&pWide_string->pWide_string);
+    pWide_string->pWide_string = pString;
+
+    WIDE_STRING_update_individual_lines(pWide_string);
+}
+
 void WIDE_STRING_destroy(WIDE_STRING *pWide_string) {
     MEMORY_HELPER_free((void **)&pWide_string->pWide_string);
 
     for (int i = 0; i < pWide_string->individual_lines.size; ++i) {
         MEMORY_HELPER_free((void **)&pWide_string->individual_lines.pArray[i]);
     }
-    VECTOR_DESTROY_LPWSTR(&pWide_string->individual_lines);
+
+    if (pWide_string->individual_lines.pArray) {
+        VECTOR_DESTROY_LPWSTR(&pWide_string->individual_lines);
+    }
 }
