@@ -7,7 +7,7 @@
 
 typedef struct _MAIN_WINDOW {
     HWND hwnd, mdi, toolbar, tdi;
-    LONG_PTR mdi_callback, toolbar_callback;
+    LONG_PTR mdi_callback;
     XY size, tdi_size;
 
     TEXTBOX *pSdi;

@@ -1,8 +1,10 @@
 #include <leak_checker.h>
 
 #include <main_window.h>
-#include <strings.h>
+#include <Uxtheme.h>
+#include <vssym32.h>
 #include <ribbon.h>
+#include <strings.h>
 #include <resource.h>
 #include <atom_wrapper.h>
 #include <memory_helper.h>
@@ -235,6 +237,26 @@ static void MAIN_WINDOW_create_tdi_child(const LPTSTR name) {
     MAIN_WINDOW_tdi_select(index);
 }
 
+HWND MAIN_WINDOW_create_toolbar(const HWND parent, const BOOL rebar, const TBBUTTON *pButtons) {
+    DWORD style = WS_CHILD | WS_VISIBLE | TBSTYLE_WRAPABLE;
+    if (rebar) {
+        style = WS_CHILD | TBSTYLE_TRANSPARENT | CCS_NODIVIDER | CCS_NORESIZE | CCS_NOPARENTALIGN;
+    }
+
+    const HWND toolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
+                                        style,
+                                        0, 0, 0, 0, parent, NULL, NULL, NULL);
+    if (toolbar) {
+        const TBADDBITMAP bitmap = { HINST_COMMCTRL, IDB_STD_SMALL_COLOR };
+        SendMessage(toolbar, TB_ADDBITMAP, 2, (LPARAM)&bitmap);
+        SendMessage(toolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
+        SendMessage(toolbar, TB_ADDBUTTONS, (WPARAM)2, (LPARAM)pButtons);
+        SendMessage(toolbar, TB_AUTOSIZE, 0, 0);
+    }
+
+    return toolbar;
+}
+
 LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE: {
@@ -266,21 +288,62 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
 
         after_ribbon:
             if (!ribbon_exists) {
-                main_window.toolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
-                                                     WS_CHILD | WS_VISIBLE | TBSTYLE_WRAPABLE,
-                                                     0, 0, 0, 0, hwnd, NULL, instance, NULL);
-                if (main_window.toolbar) {
-                    const TBADDBITMAP bitmap = { HINST_COMMCTRL, IDB_STD_SMALL_COLOR };
-                    SendMessage(main_window.toolbar, TB_ADDBITMAP, 2, (LPARAM)&bitmap);
-                    SendMessage(main_window.toolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
+                TBBUTTON pButtons[2] = {
+                    { I_IMAGENONE, ID_MAIN_WINDOW_MENU_FILE_OPEN, TBSTATE_ENABLED, BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)TEXT("Open") },
+                    { I_IMAGENONE, ID_MAIN_WINDOW_MENU_FILE_SAVE, TBSTATE_ENABLED, BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)TEXT("Save") }
+                };
 
-                    const TBBUTTON buttons[2] = {
-                        { MAKELONG(STD_FILEOPEN, 0), ID_MAIN_WINDOW_MENU_FILE_OPEN, TBSTATE_ENABLED, BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)TEXT("Open") },
-                        { MAKELONG(STD_FILESAVE, 0), ID_MAIN_WINDOW_MENU_FILE_SAVE, TBSTATE_ENABLED, BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)TEXT("Save") }
-                    };
+                const HWND rebar = CreateWindowEx(WS_EX_TOOLWINDOW, REBARCLASSNAME, NULL,
+                                                  WS_CHILD | WS_VISIBLE | WS_BORDER | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | RBS_BANDBORDERS | RBS_VARHEIGHT | CCS_NODIVIDER,
+                                                  0, 0, 0, 0, hwnd, NULL, NULL, NULL);
+                if (rebar) {
+                    main_window.toolbar = rebar;
 
-                    SendMessage(main_window.toolbar, TB_ADDBUTTONS, (WPARAM)2, (LPARAM)&buttons);
-                    SendMessage(main_window.toolbar, TB_AUTOSIZE, 0, 0);
+                    const HWND menu = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
+                                                     WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | TBSTYLE_FLAT | TBSTYLE_LIST | CCS_NODIVIDER | CCS_NORESIZE | CCS_NOPARENTALIGN,
+                                                     0, 0, 0, 0, rebar, NULL, NULL, NULL);
+                    if (menu) {
+                        SendMessage(menu, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
+                        SendMessage(menu, TB_ADDBUTTONS, (WPARAM)1, (LPARAM)&pButtons);
+                        SendMessage(menu, TB_AUTOSIZE, 0, 0);
+                    }
+
+                    pButtons[0].iBitmap = MAKELONG(STD_FILEOPEN, 0);
+                    pButtons[1].iBitmap = MAKELONG(STD_FILESAVE, 0);
+                    const HWND toolbar = MAIN_WINDOW_create_toolbar(hwnd, TRUE, pButtons);
+
+                    DWORD size = 0;
+                    REBARBANDINFO band = { 0 };
+                    band.cbSize = REBARBANDINFO_V3_SIZE;
+                    band.fMask = RBBIM_STYLE | RBBIM_CHILD | RBBIM_CHILDSIZE;
+                    band.hwndChild = menu;
+
+                    if (menu) {
+                        size = (DWORD)SendMessage(menu, TB_GETBUTTONSIZE, 0, 0);
+                        band.cxMinChild = LOWORD(size);
+                        band.cyMinChild = HIWORD(size);
+                        band.cyChild = HIWORD(size);
+                        SendMessage(rebar, RB_INSERTBAND, (WPARAM)-1, (LPARAM)&band);
+                    }
+
+                    if (toolbar) {
+                        size = (DWORD)SendMessage(toolbar, TB_GETBUTTONSIZE, 0, 0);
+                        band.hwndChild = toolbar;
+                        band.fStyle = RBBS_BREAK;
+                        band.cxMinChild = LOWORD(size) * 2;
+                        band.cyMinChild = HIWORD(size);
+                        band.cyChild = HIWORD(size);
+                        SendMessage(rebar, RB_INSERTBAND, (WPARAM)-1, (LPARAM)&band);
+                    }
+                } else {
+                    const HMENU traditional_menu = LoadMenu(NULL, MAKEINTRESOURCE(IDR_MAIN_WINDOW_MENU));
+                    if (traditional_menu) {
+                        SetMenu(hwnd, traditional_menu);
+                    }
+
+                    pButtons[0].iBitmap = MAKELONG(STD_FILEOPEN, 0);
+                    pButtons[1].iBitmap = MAKELONG(STD_FILESAVE, 0);
+                    main_window.toolbar = MAIN_WINDOW_create_toolbar(hwnd, FALSE, pButtons);
                 }
             }
 
@@ -398,7 +461,13 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                 TEXTBOX_mdi_redraw();
             }
             if (main_window.tdi) {
-                //SetWindowPos(TEXTBOX_find_tdi(0)->hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_DRAWFRAME);
+                SetWindowPos(main_window.pSdi->hwnd, NULL, 0, 0, main_window.size.x, main_window.size.y, SWP_NOMOVE | SWP_DRAWFRAME);
+                InvalidateRect(main_window.pSdi->hwnd, NULL, TRUE);
+                //SetWindowPos(main_window.pSdi->status_bar_hwnd, NULL, 0, 0, main_window.size.x, main_window.size.y, SWP_DRAWFRAME);
+                //SendMessage(, WM_SIZE, SIZE_RESTORED, MAKELPARAM(main_window.size.x, main_window.size.y));
+                //RECT rect = { 0 };
+                //GetWindowRect(main_window.pSdi->status_bar_hwnd, &rect);
+                //SetWindowPos(main_window.pSdi->hwnd, NULL, 0, 0, main_window.size.x, main_window.size.y - (rect.bottom - rect.top), SWP_NOMOVE | SWP_DRAWFRAME);
             }
             return 0;
         }
@@ -417,6 +486,10 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                     MAIN_WINDOW_tdi_select(TEXTBOX_tdi_size() - TabCtrl_GetCurSel(main_window.tdi) - 1);
                     return FALSE;
                 }
+            } else if (nmhdr->hwndFrom == main_window.toolbar && nmhdr->code == RBN_ENDDRAG) {
+                //const LPNMREBAR pNmrebar = (LPNMREBAR)lParam;
+                SendMessage(hwnd, WM_SIZE, SIZE_RESTORED, MAKELPARAM(main_window.size.x, main_window.size.y));
+                //SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_DRAWFRAME);
             }
             break;
         }
@@ -465,7 +538,6 @@ void MAIN_WINDOW_initialize(void) {
     main_window.tdi = NULL;
 
     main_window.mdi_callback = (LONG_PTR)NULL;
-    main_window.toolbar_callback = (LONG_PTR)NULL;
 
     XY size = { 0 };
     main_window.size = size;
@@ -490,14 +562,13 @@ void MAIN_WINDOW_initialize(void) {
     LPCTSTR pMain_window_class_name = WIDE_STRING_get_t_string(&main_window_class_name),
             pMain_window_title = WIDE_STRING_get_t_string(&main_window_title);
 
-    const HMENU menu = LoadMenu(NULL, MAKEINTRESOURCE(IDR_MAIN_WINDOW_MENU));
     main_window.hwnd = CreateWindow(pMain_window_class_name,
                                     pMain_window_title,
                                     WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                                     CW_USEDEFAULT, CW_USEDEFAULT,
                                     CW_USEDEFAULT, CW_USEDEFAULT,
                                     NULL,
-                                    menu,
+                                    NULL,
                                     NULL,
                                     NULL);
     
