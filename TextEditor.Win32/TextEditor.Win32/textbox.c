@@ -1,7 +1,6 @@
 #include <leak_checker.h>
 
 #include <strings.h>
-//#include <vsstyle.h>
 #include <textbox.h>
 #include <commctrl.h>
 #include <resource.h>
