@@ -221,7 +221,7 @@ static void MAIN_WINDOW_update_tdi_strip_height(void) {
 
     RECT size = { 0 };
     TabCtrl_GetItemRect(main_window.tdi, 0, &size);
-    main_window.tdi_strip_height = size.top + size.bottom;
+    main_window.tdi_strip_height = size.bottom - size.top;
 
     TabCtrl_DeleteItem(main_window.tdi, 0);
 }
@@ -263,6 +263,11 @@ HWND MAIN_WINDOW_create_toolbar(const HWND parent, const BOOL rebar, const TBBUT
 LRESULT CALLBACK MAIN_WINDOW_tdi_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_PAINT: {
+            HTHEME theme = OpenThemeData(hwnd, L"REBAR");
+            if (!theme) {
+                break;
+            }
+
             /*
                 1. Paint full client.
                 2. Paint theme in tab strip.
@@ -303,12 +308,17 @@ LRESULT CALLBACK MAIN_WINDOW_tdi_DefWindowProc(const HWND hwnd, const UINT uMsg,
             GetRgnBox(tab_region, &tab_rect);
             DeleteObject(tab_region);
 
+            RECT toolbar_rect = { 0 };
+            if (main_window.toolbar) {
+                GetClientRect(main_window.toolbar, &toolbar_rect);
+            }
+
             RECT to_color_rect = { 0 };
-            to_color_rect.left = tab_rect.right - tab_rect.left - 500;
+            to_color_rect.left = tab_rect.right - tab_rect.left + 2;
             to_color_rect.right = full_normal_rect.right;
+            to_color_rect.top = -toolbar_rect.bottom;
             to_color_rect.bottom = tab_rect.bottom - tab_rect.top + 2;
 
-            HTHEME theme = OpenThemeData(hwnd, L"REBAR");
             DrawThemeBackground(theme, hdc, RP_BACKGROUND, 0, &to_color_rect, NULL);
             CloseThemeData(theme);
 
