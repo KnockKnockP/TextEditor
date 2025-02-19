@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <signal.h>
 #include <dwmapi.h>
+#include <Uxtheme.h>
 #include <Windows.h>
 #include <string_utilities.h>
 
@@ -41,6 +42,9 @@ typedef BOOL (WINAPI *RemoveFontResourceEx_fetched)(LPCTSTR name, DWORD fl, PVOI
 typedef HIMC (WINAPI *ImmGetContext_fetched)(HWND unnamedParam1);
 typedef LONG (WINAPI *ImmGetCompositionString_fetched)(HIMC unnamedParam1, DWORD unnamedParam2, LPVOID lpBuf, DWORD dwBufLen);
 typedef BOOL (WINAPI *ImmReleaseContext_fetched)(HWND unnamedParam1, HIMC unnamedParam2);
+typedef HTHEME (WINAPI *OpenThemeData_fetched)(HWND hwnd, LPCWSTR pszClassList);
+typedef HRESULT (WINAPI *DrawThemeBackground_fetched)(HTHEME hTheme, HDC hdc, int iPartId, int iStateId, LPCRECT pRect, LPCRECT pClipRect);
+typedef HRESULT (WINAPI *CloseThemeData_fetched)(HTHEME hTheme);
 typedef HRESULT (WINAPI *DwmEnableBlurBehindWindow_fetched)(HWND hWnd, const DWM_BLURBEHIND *pBlurBehind);
 typedef HRESULT (WINAPI *DwmGetColorizationColor_fetched)(DWORD *pcrColorization, BOOL *pfOpaqueBlend);
 
@@ -53,6 +57,9 @@ WINDOWS_HELPER_GET_FUNCTION_DECLARATION(RemoveFontResourceEx);
 WINDOWS_HELPER_GET_FUNCTION_DECLARATION(ImmGetContext);
 WINDOWS_HELPER_GET_FUNCTION_DECLARATION(ImmGetCompositionString);
 WINDOWS_HELPER_GET_FUNCTION_DECLARATION(ImmReleaseContext);
+WINDOWS_HELPER_GET_FUNCTION_DECLARATION(OpenThemeData);
+WINDOWS_HELPER_GET_FUNCTION_DECLARATION(DrawThemeBackground);
+WINDOWS_HELPER_GET_FUNCTION_DECLARATION(CloseThemeData);
 WINDOWS_HELPER_GET_FUNCTION_DECLARATION(DwmEnableBlurBehindWindow);
 WINDOWS_HELPER_GET_FUNCTION_DECLARATION(DwmGetColorizationColor);
 

@@ -13,9 +13,9 @@
 
 MAIN_WINDOW main_window = { 0 };
 LONG ribbon_reference_count = 0, ribbon_command_handler_reference_count = 0;
-HBITMAP hBitmap = NULL, hBitmap_old = NULL;
-WNDPROC tdi_original = NULL;
-HDC tdi_memory_hdc = NULL;
+HBITMAP hBitmap = NULL, hBitmap_old = NULL, hBitmap_menu = NULL, hBitmap_old_menu = NULL;
+WNDPROC tdi_original = NULL, menu_bar_original = NULL;
+HDC tdi_memory_hdc = NULL, menu_memory_hdc = NULL;
 
 HRESULT STDMETHODCALLTYPE IUICommandHandler_QueryInterface(IUICommandHandler *This, REFIID riid, void **ppvObject) {
     if (IsEqualIID(riid, &IID_IUnknown) || IsEqualIID(riid, &IID_IUICommandHandler)) {
@@ -243,7 +243,7 @@ static void MAIN_WINDOW_create_tdi_child(const LPTSTR name) {
 HWND MAIN_WINDOW_create_toolbar(const HWND parent, const BOOL rebar, const TBBUTTON *pButtons) {
     DWORD style = WS_CHILD | WS_VISIBLE | TBSTYLE_WRAPABLE;
     if (rebar) {
-        style = WS_CHILD | TBSTYLE_TRANSPARENT | CCS_NODIVIDER | CCS_NORESIZE | CCS_NOPARENTALIGN;
+        style = WS_CHILD | TBSTYLE_TRANSPARENT | CCS_NODIVIDER | CCS_NORESIZE;
     }
 
     const HWND toolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
@@ -263,7 +263,7 @@ HWND MAIN_WINDOW_create_toolbar(const HWND parent, const BOOL rebar, const TBBUT
 LRESULT CALLBACK MAIN_WINDOW_tdi_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         case WM_PAINT: {
-            HTHEME theme = OpenThemeData(hwnd, L"REBAR");
+            HTHEME theme = OpenThemeData_saved(hwnd, L"REBAR");
             if (!theme) {
                 break;
             }
@@ -294,7 +294,6 @@ LRESULT CALLBACK MAIN_WINDOW_tdi_DefWindowProc(const HWND hwnd, const UINT uMsg,
             HDC hdc = BeginPaint(hwnd, &paint_struct);
 
             SendMessage(hwnd, WM_PRINTCLIENT, (WPARAM)tdi_memory_hdc, PRF_CLIENT);
-            BitBlt(hdc, full_rect.left, full_rect.top, full_rect.right, full_rect.bottom, tdi_memory_hdc, 0, 0, SRCCOPY);
 
             HRGN tab_region = CreateRectRgn(0, 0, 0, 0);
             RECT tab_rect = { 0 };
@@ -319,8 +318,8 @@ LRESULT CALLBACK MAIN_WINDOW_tdi_DefWindowProc(const HWND hwnd, const UINT uMsg,
             to_color_rect.top = -toolbar_rect.bottom;
             to_color_rect.bottom = tab_rect.bottom - tab_rect.top + 2;
 
-            DrawThemeBackground(theme, hdc, RP_BACKGROUND, 0, &to_color_rect, NULL);
-            CloseThemeData(theme);
+            DrawThemeBackground_saved(theme, hdc, RP_BACKGROUND, 0, &to_color_rect, NULL);
+            CloseThemeData_saved(theme);
 
             BitBlt(hdc, full_rect.left, full_rect.top, tab_rect.right + 2, tab_rect.bottom, tdi_memory_hdc, 0, 0, SRCCOPY);
             EndPaint(hwnd, &paint_struct);
@@ -338,6 +337,62 @@ LRESULT CALLBACK MAIN_WINDOW_tdi_DefWindowProc(const HWND hwnd, const UINT uMsg,
     }
 
     return CallWindowProc(tdi_original, hwnd, uMsg, wParam, lParam);
+}
+
+LRESULT CALLBACK MAIN_WINDOW_menu_bar_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
+    switch (uMsg) {
+        /*
+        case WM_PAINT: {
+            HTHEME theme = OpenThemeData_saved(hwnd, L"REBAR");
+            if (!theme) {
+                break;
+            }
+
+            RECT rect = { 0 };
+            GetClientRect(hwnd, &rect);
+            RECT normal_rect = { 0 };
+            normal_rect.right = rect.right - rect.left;
+            normal_rect.bottom = rect.bottom - rect.top;
+
+            if (!menu_memory_hdc) {
+                const HDC hdc_display = CreateIC(TEXT("DISPLAY"), NULL, NULL, NULL);
+                menu_memory_hdc = CreateCompatibleDC(hdc_display);
+
+                hBitmap_menu = CreateCompatibleBitmap(hdc_display, normal_rect.right, normal_rect.bottom);
+                hBitmap_old_menu = SelectObject(menu_memory_hdc, hBitmap_menu);
+                DeleteDC(hdc_display);
+            }
+
+            PAINTSTRUCT paint_struct = { 0 };
+            HDC hdc = BeginPaint(hwnd, &paint_struct);
+
+            SendMessage(hwnd, WM_PRINTCLIENT, (WPARAM)menu_memory_hdc, PRF_CLIENT);
+            BitBlt(hdc, rect.left, rect.top, rect.right, rect.bottom, menu_memory_hdc, 0, 0, SRCCOPY);
+
+            const int buttons = SendMessage(hwnd, TB_BUTTONCOUNT, 0, 0);
+            const DWORD size = SendMessage(hwnd, TB_GETBUTTONSIZE, 0, 0);
+            rect.left += LOWORD(size) * buttons;
+
+            FillRect(hdc, &rect, CreateSolidBrush(RGB(255, 0, 0)));
+            //DrawThemeBackground_saved(theme, hdc, RP_BACKGROUND, 0, &rect, NULL);
+            CloseThemeData_saved(theme);
+
+            EndPaint(hwnd, &paint_struct);
+            return 0;
+        }
+
+        case WM_DESTROY:
+            DeleteObject(hBitmap_menu);
+            hBitmap_menu = NULL;
+            SelectObject(menu_memory_hdc, hBitmap_old_menu);
+            DeleteDC(menu_memory_hdc);
+            hBitmap_old_menu = NULL;
+            menu_memory_hdc = NULL;
+            break;
+            */
+    }
+
+    return CallWindowProc(menu_bar_original, hwnd, uMsg, wParam, lParam);
 }
 
 LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
@@ -371,29 +426,29 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
 
         after_ribbon:
             if (!ribbon_exists) {
-                TBBUTTON pButtons[2] = {
-                    { I_IMAGENONE, ID_MAIN_WINDOW_MENU_FILE_OPEN, TBSTATE_ENABLED, BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)TEXT("Open") },
-                    { I_IMAGENONE, ID_MAIN_WINDOW_MENU_FILE_SAVE, TBSTATE_ENABLED, BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)TEXT("Save") }
+                const TBBUTTON pButtons[2] = {
+                    { MAKELONG(STD_FILEOPEN, 0), ID_MAIN_WINDOW_MENU_FILE_OPEN, TBSTATE_ENABLED, BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)TEXT("Open") },
+                    { MAKELONG(STD_FILESAVE, 0), ID_MAIN_WINDOW_MENU_FILE_SAVE, TBSTATE_ENABLED, BTNS_AUTOSIZE, { 0 }, 0, (INT_PTR)TEXT("Save") }
                 };
 
                 const HWND rebar = CreateWindowEx(WS_EX_TOOLWINDOW, REBARCLASSNAME, NULL,
-                                                  WS_CHILD | WS_VISIBLE | WS_BORDER | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | RBS_BANDBORDERS | RBS_VARHEIGHT | CCS_NODIVIDER,
+                                                  WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | RBS_BANDBORDERS | RBS_VARHEIGHT | CCS_NODIVIDER,
                                                   0, 0, 0, 0, hwnd, NULL, NULL, NULL);
                 if (rebar) {
                     main_window.toolbar = rebar;
 
                     const HWND menu = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
-                                                     WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | TBSTYLE_FLAT | TBSTYLE_LIST | CCS_NODIVIDER | CCS_NORESIZE | CCS_NOPARENTALIGN,
+                                                     WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | TBSTYLE_FLAT | TBSTYLE_LIST | TBSTYLE_TRANSPARENT | CCS_NODIVIDER | CCS_NORESIZE,
                                                      0, 0, 0, 0, rebar, NULL, NULL, NULL);
                     if (menu) {
+                        const TBBUTTON pFile[1] = { { I_IMAGENONE, ID_MAIN_WINDOW_MENU_FILE, TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_DROPDOWN, { 0 }, 0, (INT_PTR)TEXT("File") } };
+
                         SendMessage(menu, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
-                        SendMessage(menu, TB_ADDBUTTONS, (WPARAM)1, (LPARAM)&pButtons);
+                        SendMessage(menu, TB_ADDBUTTONS, (WPARAM)1, (LPARAM)&pFile);
                         SendMessage(menu, TB_AUTOSIZE, 0, 0);
                     }
 
-                    pButtons[0].iBitmap = MAKELONG(STD_FILEOPEN, 0);
-                    pButtons[1].iBitmap = MAKELONG(STD_FILESAVE, 0);
-                    const HWND toolbar = MAIN_WINDOW_create_toolbar(hwnd, TRUE, pButtons);
+                    const HWND toolbar = MAIN_WINDOW_create_toolbar(rebar, TRUE, pButtons);
 
                     DWORD size = 0;
                     REBARBANDINFO band = { 0 };
@@ -424,8 +479,6 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                         SetMenu(hwnd, traditional_menu);
                     }
 
-                    pButtons[0].iBitmap = MAKELONG(STD_FILEOPEN, 0);
-                    pButtons[1].iBitmap = MAKELONG(STD_FILESAVE, 0);
                     main_window.toolbar = MAIN_WINDOW_create_toolbar(hwnd, FALSE, pButtons);
                 }
             }
@@ -467,7 +520,7 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                 MEMORY_HELPER_free((void **)&pUntitled_t);
                 WIDE_STRING_destroy(&untitled);
 
-                tdi_original = (WNDPROC)SetWindowLongPtr(main_window.tdi, GWLP_WNDPROC, (LONG_PTR)MAIN_WINDOW_tdi_DefWindowProc);
+                tdi_original = (WNDPROC)SetWindowLongPtr(main_window.tdi, GWLP_WNDPROC, (LONG)MAIN_WINDOW_tdi_DefWindowProc);
             }
             return 0;
         }
@@ -534,9 +587,10 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                 break;
             }
 
+            int top_height = main_window.ribbon_height + toolbar_height, compensated_height = main_window.size.y - top_height;
             if (!MoveWindow(window,
-                            0, main_window.ribbon_height + toolbar_height,
-                            main_window.size.x, main_window.size.y - main_window.ribbon_height - toolbar_height,
+                            0, top_height,
+                            main_window.size.x, compensated_height,
                             FALSE)) {
                 WINDOWS_HELPER_warning(TEXT("Failed to resize."));
             }
@@ -546,13 +600,11 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                 TEXTBOX_mdi_redraw();
             }
             if (main_window.tdi) {
-                SetWindowPos(main_window.pSdi->hwnd, NULL, 0, 0, main_window.size.x, main_window.size.y, SWP_NOMOVE | SWP_DRAWFRAME);
+                MAIN_WINDOW_update_tdi_strip_height();
+                top_height += main_window.tdi_strip_height;
+                compensated_height -= main_window.tdi_strip_height;
+                SetWindowPos(main_window.pSdi->hwnd, NULL, 0, main_window.tdi_strip_height, main_window.size.x, compensated_height, SWP_DRAWFRAME);
                 InvalidateRect(main_window.pSdi->hwnd, NULL, TRUE);
-                //SetWindowPos(main_window.pSdi->status_bar_hwnd, NULL, 0, 0, main_window.size.x, main_window.size.y, SWP_DRAWFRAME);
-                //SendMessage(, WM_SIZE, SIZE_RESTORED, MAKELPARAM(main_window.size.x, main_window.size.y));
-                //RECT rect = { 0 };
-                //GetWindowRect(main_window.pSdi->status_bar_hwnd, &rect);
-                //SetWindowPos(main_window.pSdi->hwnd, NULL, 0, 0, main_window.size.x, main_window.size.y - (rect.bottom - rect.top), SWP_NOMOVE | SWP_DRAWFRAME);
             }
             return 0;
         }
@@ -564,17 +616,30 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
             break;
 
         case WM_NOTIFY: {
-            const LPNMHDR nmhdr = (LPNMHDR)lParam;
+            const LPNMHDR pNmhdr = (LPNMHDR)lParam;
 
-            if (nmhdr->hwndFrom == main_window.tdi) {
-                if (nmhdr->code == TCN_SELCHANGING) {
+            if (pNmhdr->hwndFrom == main_window.tdi) {
+                if (pNmhdr->code == TCN_SELCHANGING) {
                     MAIN_WINDOW_tdi_select(TEXTBOX_tdi_size() - TabCtrl_GetCurSel(main_window.tdi) - 1);
                     return FALSE;
                 }
-            } else if (nmhdr->hwndFrom == main_window.toolbar && nmhdr->code == RBN_ENDDRAG) {
-                //const LPNMREBAR pNmrebar = (LPNMREBAR)lParam;
+            } else if (pNmhdr->hwndFrom == main_window.toolbar && pNmhdr->code == RBN_ENDDRAG) {
                 SendMessage(hwnd, WM_SIZE, SIZE_RESTORED, MAKELPARAM(main_window.size.x, main_window.size.y));
-                //SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_DRAWFRAME);
+            }
+
+            if (pNmhdr->code == TBN_DROPDOWN) {
+                const LPNMTOOLBAR pNmtoolbar = (LPNMTOOLBAR)pNmhdr;
+                if (pNmtoolbar->iItem == ID_MAIN_WINDOW_MENU_FILE) {
+                    HMENU popup = LoadMenu(NULL, MAKEINTRESOURCE(IDR_MAIN_WINDOW_MENU));
+                    popup = GetSubMenu(popup, 0);
+
+                    RECT rect = { 0 };
+                    SendMessage(pNmhdr->hwndFrom, TB_GETRECT, pNmtoolbar->iItem, (LPARAM)&rect);
+                    MapWindowPoints(pNmhdr->hwndFrom, HWND_DESKTOP, (LPPOINT)&rect, 2);
+                    TrackPopupMenu(popup, TPM_LEFTALIGN | TPM_LEFTBUTTON, rect.left, rect.bottom, 0, hwnd, NULL);
+                    DestroyMenu(popup);
+                    return TBDDRET_DEFAULT;
+                }
             }
             break;
         }

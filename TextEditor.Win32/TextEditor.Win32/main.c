@@ -40,6 +40,9 @@ WinMain
     WINDOWS_HELPER_get_ImmGetContext();
     WINDOWS_HELPER_get_ImmGetCompositionString();
     WINDOWS_HELPER_get_ImmReleaseContext();
+    WINDOWS_HELPER_get_OpenThemeData();
+    WINDOWS_HELPER_get_DrawThemeBackground();
+    WINDOWS_HELPER_get_CloseThemeData();
     WINDOWS_HELPER_get_DwmEnableBlurBehindWindow();
     WINDOWS_HELPER_get_DwmGetColorizationColor();
     STRINGS_initialize();

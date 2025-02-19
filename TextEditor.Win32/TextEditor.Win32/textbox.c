@@ -147,7 +147,7 @@ static LRESULT CALLBACK TEXTBOX_DefWindowProc(const HWND hwnd, const UINT uMsg, 
 
             pTextbox->size.x = LOWORD(lParam);
             pTextbox->size.y = HIWORD(lParam);
-            SendMessage(pTextbox->status_bar_hwnd, WM_SIZE, wParam, lParam);
+            SendMessage(pTextbox->status_bar_hwnd, uMsg, 0, 0);
             break;
         }
 
