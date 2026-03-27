@@ -1,63 +1,95 @@
-#ifndef UNIFIEDSTRING_H
-#define UNIFIEDSTRING_H
+#ifndef TEXTEDITOR_STRING_UTILITIES_H
+#define TEXTEDITOR_STRING_UTILITIES_H
 
-#include <vector.h>
 #include <Windows.h>
 
-typedef enum _STRING_UTILITIES_ENCODING {
-    STRING_UTILITIES_ENCODING_NONE = 0,
-    ANSI = 1,
-    WIDE = 2, //UTF-16 LE with BOM
-    UTF8 = 3,
-    UTF8_WITH_BOM = 4
-} STRING_UTILITIES_ENCODING;
+#include <vector.h>
 
-int STRING_UTILITIES_detect_encoding(const BYTE * const pBytes, const size_t size);
-LPTSTR STRING_UTILITIES_encoding_enum_to_string(const int encoding_enum);
+namespace TextEditor {
 
-LPTSTR STRING_UTILITIES_w_to_t(LPCWSTR pWide_string);
-LPWSTR STRING_UTILITIES_a_to_w(LPCSTR pANSI_string);
-LPSTR STRING_UTILITIES_w_to_a(LPCWSTR pWide_string);
-LPWSTR STRING_UTILITIES_UTF8_to_w(LPCSTR pUTF8_string);
+enum TextEncoding {
+    kTextEncodingNone = 0,
+    kTextEncodingAnsi = 1,
+    kTextEncodingWide = 2,
+    kTextEncodingUtf8 = 3,
+    kTextEncodingUtf8WithBom = 4
+};
 
-LPWSTR STRING_UTILITIES_clone_w_to_w(LPCWSTR pOriginal);
+class TStringBuffer {
+public:
+    TStringBuffer();
+    explicit TStringBuffer(TCHAR *value);
+    TStringBuffer(const TStringBuffer &other);
+    ~TStringBuffer();
 
-size_t STRING_UTILITIES_characters(LPCTSTR pString);
+    TStringBuffer &operator=(const TStringBuffer &other);
 
-typedef struct _WIDE_STRING {
-    LPWSTR pWide_string;
-    VECTOR_LPWSTR individual_lines;
-} WIDE_STRING;
+    const TCHAR *c_str() const;
+    operator LPCTSTR() const;
 
-void WIDE_STRING_initialize(WIDE_STRING *pWide_string);
+private:
+    void Assign(TCHAR *value);
+    static TCHAR *Clone(LPCTSTR value);
 
-WIDE_STRING WIDE_STRING_create_empty(void);
-WIDE_STRING WIDE_STRING_create_a(LPCSTR pANSI_string);
-WIDE_STRING WIDE_STRING_create_w(LPCWSTR pWide_string);
-WIDE_STRING WIDE_STRING_create(LPCTSTR pT_string);
+    TCHAR *value_;
+};
 
-LPCTSTR WIDE_STRING_get_t_string(WIDE_STRING *pWide_string);
+class WideString {
+public:
+    WideString();
+    explicit WideString(const char *ansi_string);
+    explicit WideString(const wchar_t *wide_string);
+    WideString(const WideString &other);
+    ~WideString();
 
-void WIDE_STRING_append_wide_char(WIDE_STRING *pOriginal, const WCHAR additional);
-void WIDE_STRING_append_wide_char_at(WIDE_STRING *pOriginal, const WCHAR additional, const size_t at);
-void WIDE_STRING_append_string_a(WIDE_STRING *pOriginal, LPCSTR pAdditional);
-void WIDE_STRING_append_string_a_at(WIDE_STRING *pOriginal, LPCSTR pAdditional, const size_t at);
-void WIDE_STRING_append_string_w(WIDE_STRING *pOriginal, LPCWSTR pAdditional);
-void WIDE_STRING_append_string_w_at(WIDE_STRING *pOriginal, LPCWSTR pAdditional, const size_t at);
-void WIDE_STRING_append_string(WIDE_STRING *pOriginal, LPCTSTR pAdditional);
-void WIDE_STRING_append_string_at(WIDE_STRING *pOriginal, LPCTSTR pAdditional, const size_t at);
-void WIDE_STRING_append_WIDE_STRING(WIDE_STRING *pOriginal, const WIDE_STRING *pAdditional);
-void WIDE_STRING_remove_last_character(WIDE_STRING *pWide_string);
-void WIDE_STRING_remove_character_at(WIDE_STRING *pWide_string, const size_t at);
+    WideString &operator=(const WideString &other);
 
-void WIDE_STRING_append_wide_char_at_line(WIDE_STRING *pOriginal, const WCHAR additional, const size_t line, const size_t at);
-void WIDE_STRING_append_string_a_at_line(WIDE_STRING *pOriginal, LPCSTR pAdditional, const size_t line, const size_t at);
-void WIDE_STRING_append_string_w_at_line(WIDE_STRING *pOriginal, LPCWSTR pAdditional, const size_t line, const size_t at);
-void WIDE_STRING_append_string_at_line(WIDE_STRING *pOriginal, LPCTSTR pAdditional, const size_t line, const size_t at);
-void WIDE_STRING_remove_character_at_line(WIDE_STRING *pOriginal, const size_t line, const size_t at);
+    const wchar_t *c_str() const;
+    size_t length() const;
+    bool empty() const;
 
-void WIDE_STRING_consolidate_individual_lines(WIDE_STRING *pWide_string);
-void WIDE_STRING_extract_file_name_from_path(WIDE_STRING *pWide_string);
+    TStringBuffer ToTString() const;
 
-void WIDE_STRING_destroy(WIDE_STRING *pWide_string);
+    void AppendChar(wchar_t character);
+    void InsertChar(size_t position, wchar_t character);
+    void AppendAnsi(const char *text);
+    void InsertAnsi(size_t position, const char *text);
+    void AppendWide(const wchar_t *text);
+    void InsertWide(size_t position, const wchar_t *text);
+    void Append(const WideString &text);
+    void RemoveLastCharacter();
+    void RemoveCharacterAt(size_t position);
+
+    void InsertCharAtLine(size_t line, size_t position, wchar_t character);
+    void InsertAnsiAtLine(size_t line, size_t position, const char *text);
+    void InsertWideAtLine(size_t line, size_t position, const wchar_t *text);
+    void RemoveCharacterAtLine(size_t line, size_t position);
+
+    size_t line_count() const;
+    const wchar_t *line(size_t index) const;
+
+    void ConsolidateLines();
+    void ExtractFileNameFromPath();
+
+    static WideString FromTString(LPCTSTR t_string);
+    static WideString FromUtf8(const char *utf8_string);
+
+private:
+    void AssignWide(wchar_t *wide_string);
+    void UpdateLines();
+    void ClearLines();
+    static wchar_t *CloneWide(const wchar_t *text);
+    static wchar_t *FromAnsi(const char *ansi_string);
+    static char *ToAnsi(const wchar_t *wide_string);
+
+    wchar_t *value_;
+    Vector<wchar_t *> lines_;
+};
+
+TextEncoding DetectEncoding(const BYTE *bytes, size_t size);
+LPCTSTR EncodingName(TextEncoding encoding);
+size_t CountCharacters(LPCTSTR text);
+
+}  // namespace TextEditor
+
 #endif

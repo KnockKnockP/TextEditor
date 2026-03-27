@@ -1,25 +1,31 @@
-#ifndef STRINGS_H
-#define STRINGS_H
+#ifndef TEXTEDITOR_STRINGS_H
+#define TEXTEDITOR_STRINGS_H
 
 #include <Windows.h>
 
-#ifndef DEFINE_STRING
-#define DEFINE_STRING(name) \
-extern const WCHAR STRINGS_##name##_en_us[]; \
-extern const WCHAR STRINGS_##name##_ko_kr[]; \
-LPCWSTR STRINGS_##name(void)
-#endif
+namespace TextEditor {
 
-typedef enum _LOCALE_DOUBLE {
-	EN_US,
-	KO_KR
-} LOCALE_DOUBLE;
+class Strings {
+public:
+    enum Locale {
+        kEnglishUnitedStates,
+        kKoreanSouthKorea
+    };
 
-extern LOCALE_DOUBLE STRINGS_locale;
+    static void Initialize();
 
-DEFINE_STRING(MAIN_WINDOW_TITLE);
-DEFINE_STRING(UNTITLED);
-DEFINE_STRING(ENCODING);
+    static Locale locale();
 
-void STRINGS_initialize(void);
+    static const WCHAR *MainWindowTitle();
+    static const WCHAR *Untitled();
+    static const WCHAR *Encoding();
+
+private:
+    static const WCHAR *Select(const WCHAR *english, const WCHAR *korean);
+
+    static Locale current_locale_;
+};
+
+}  // namespace TextEditor
+
 #endif

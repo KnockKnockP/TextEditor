@@ -70,10 +70,11 @@
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;_CRTDBG_MAP_ALLOC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -86,11 +87,12 @@
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;_CRTDBG_MAP_ALLOC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <UndefinePreprocessorDefinitions>UNICODE</UndefinePreprocessorDefinitions>
       <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -106,9 +108,10 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -119,19 +122,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="atom_wrapper.c" />
-    <ClCompile Include="ribbon_ported.c" />
-    <ClCompile Include="strings.c" />
-    <ClCompile Include="XY.c" />
+    <ClCompile Include="atom_wrapper.cpp" />
+    <ClCompile Include="ribbon_host.cpp" />
+    <ClCompile Include="ribbon_ported.cpp" />
+    <ClCompile Include="strings.cpp" />
+    <ClCompile Include="XY.cpp" />
     <ClInclude Include="ribbon.h" />
     <ClInclude Include="atom_wrapper.h" />
-    <ClCompile Include="main.c" />
-    <ClCompile Include="main_window.c" />
-    <ClCompile Include="memory_helper.c" />
-    <ClCompile Include="string_utilities.c" />
-    <ClCompile Include="textbox.c" />
-    <ClCompile Include="vector.c" />
-    <ClCompile Include="windows_helper.c" />
+    <ClInclude Include="ribbon_host.h" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="main_window.cpp" />
+    <ClCompile Include="memory_helper.cpp" />
+    <ClCompile Include="string_utilities.cpp" />
+    <ClCompile Include="textbox.cpp" />
+    <ClCompile Include="vector.cpp" />
+    <ClCompile Include="windows_helper.cpp" />
     <ClInclude Include="leak_checker.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="ribbon_ported.h" />

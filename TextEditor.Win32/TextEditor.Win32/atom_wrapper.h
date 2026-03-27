@@ -1,12 +1,23 @@
-#ifndef ATOM_WRAPPER_H
-#define ATOM_WRAPPER_H
+#ifndef TEXTEDITOR_WINDOW_CLASS_H
+#define TEXTEDITOR_WINDOW_CLASS_H
 
 #include <Windows.h>
+
 #include <string_utilities.h>
 
-typedef struct _ATOM_WRAPPER {
-    ATOM atom;
-} ATOM_WRAPPER;
+namespace TextEditor {
 
-void ATOM_WRAPPER_initialize(ATOM_WRAPPER *pAtom_wrapper, WIDE_STRING *pName, const UINT style, const WNDPROC callback);
+class WindowClass {
+public:
+    WindowClass();
+
+    bool Register(const WideString &name, UINT style, WNDPROC callback);
+    ATOM atom() const;
+
+private:
+    ATOM atom_;
+};
+
+}  // namespace TextEditor
+
 #endif

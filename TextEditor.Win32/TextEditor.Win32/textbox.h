@@ -1,60 +1,103 @@
-#ifndef TEXTBOX_H
-#define TEXTBOX_H
+#ifndef TEXTEDITOR_TEXTBOX_H
+#define TEXTEDITOR_TEXTBOX_H
 
-#include <stdint.h>
 #include <Windows.h>
+
 #include <XY.h>
 #include <atom_wrapper.h>
-#include <windows_helper.h>
 #include <string_utilities.h>
+#include <vector.h>
+#include <windows_helper.h>
 
-typedef struct _TEXT_FILE {
-    WIDE_STRING name, text;
-    int encoding;
-} TEXT_FILE;
+namespace TextEditor {
 
-void TEXT_FILE_destroy(TEXT_FILE *pText_file);
+class TextFile {
+public:
+    TextFile();
 
-typedef struct _FONT {
-    HFONT font;
-    XY size;
-    WIDE_STRING *pFont_file, *pFont_name;
-    LPCTSTR pFont_file_t, pFont_name_t;
-} FONT;
+    WideString name;
+    WideString text;
+    TextEncoding encoding;
+};
 
-typedef struct _TEXTBOX {
-    HWND hwnd, status_bar_hwnd;
-    XY size, caret, caret_pixels;
-    TEXT_FILE file;
-    FONT font;
-    BOOL focus;
+class TextBox {
+public:
+    TextBox(const Point &size, WideString *font_file, WideString *font_name);
+    ~TextBox();
 
-    WIDE_STRING ime;
+    bool CreateChildWindow(HWND parent, int vertical_offset);
+    bool CreateMdiChild(HWND mdi_client, const Point &parent_size);
+
+    HWND hwnd() const;
+    HWND status_bar() const;
+    const TextFile &file() const;
+
+    void SetFile(const TextFile &text_file);
+    void RequestRedraw() const;
+    void SetCaretPosition(int x, int y);
+
+    static TextBox *Find(HWND hwnd);
+    static TextBox *FindTdi(size_t index);
+    static void SelectTdi(size_t index);
+    static int TdiSize();
+    static void RedrawMdi();
+
+private:
+    struct FontState {
+        FontState()
+            : handle(NULL),
+              size(6, 16),
+              file(NULL),
+              name(NULL) {
+        }
+
+        HFONT handle;
+        Point size;
+        WideString *file;
+        WideString *name;
+        TStringBuffer file_buffer;
+        TStringBuffer name_buffer;
+    };
+
+    static bool EnsureWindowClass();
+    static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_param);
+    static TextBox *FromWindow(HWND hwnd);
+
+    LRESULT OnCreate();
+    void OnDestroy();
+    void OnNonClientDestroy();
+    void OnSize(LPARAM l_param);
+    void OnSetFocus();
+    void OnKillFocus();
+    void OnImeComposition(LPARAM l_param);
+    void OnChar(WPARAM w_param);
+    void OnKeyDown(WPARAM w_param);
+    void OnPaint();
+
+    void CreateCaretHandle();
+    void UpdateTitle();
+    void UpdateCaretPixels(HDC hdc);
+    WideString EncodingLabel() const;
+    void ResetMultibyteBuffer();
+
+    static WindowClass window_class_;
+    static bool window_class_registered_;
+    static Vector<TextBox *> instances_;
+
+    HWND hwnd_;
+    HWND status_bar_hwnd_;
+    Point size_;
+    Point caret_;
+    Point caret_pixels_;
+    TextFile file_;
+    FontState font_;
+    bool focus_;
+    WideString ime_text_;
 #ifndef UNICODE
-    CHAR multibyte_buffer[3];
+    char multibyte_buffer_[3];
 #endif
-} TEXTBOX;
+};
 
-typedef TEXTBOX* PTEXTBOX;
-VECTOR_DECLARE_ALL(PTEXTBOX);
+}  // namespace TextEditor
 
-extern LPCTSTR pTextbox_registered_class_name;
-
-TEXTBOX *TEXTBOX_create(const HWND parent,
-                        const XY size,
-                        const int vertical_offset,
-                        WIDE_STRING *pFont_file,
-                        WIDE_STRING *pFont_name);
-void TEXTBOX_set_file(TEXTBOX *pTextbox, const TEXT_FILE text_file);
-TEXTBOX *TEXTBOX_find_by_HWND(const HWND hwnd);
-void TEXTBOX_request_redraw(const TEXTBOX *pTextbox);
-void TEXTBOX_mdi_redraw(void);
-void TEXTBOX_set_caret_position(TEXTBOX *pTextbox, int x, int y);
-TEXTBOX *TEXTBOX_tdi_find(const int index);
-void TEXTBOX_tdi_select(const int index);
-int TEXTBOX_tdi_size(void);
-
-#ifndef UNICODE
-void TEXTBOX_reset_multibyte_buffer(TEXTBOX *pTextbox);
-#endif
 #endif

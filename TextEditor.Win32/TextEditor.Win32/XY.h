@@ -1,11 +1,15 @@
-#ifndef XY_H
-#define XY_H
+#ifndef TEXTEDITOR_POINT_H
+#define TEXTEDITOR_POINT_H
 
-#include <Windows.h>
+namespace TextEditor {
+    struct Point {
+        int x = 0, y = 0;
 
-typedef struct _XY {
-    int x, y;
-} XY;
+        Point(){}
 
-BOOL XY_equals(const XY *p1, const XY *p2);
+        Point(int x_, int y_) : x(x_), y{ y_ } {}
+
+        bool operator==(const Point &other) const;
+    };
+}
 #endif

@@ -1,207 +1,155 @@
-#ifndef VECTOR_H
-#define VECTOR_H
+#ifndef TEXTEDITOR_VECTOR_H
+#define TEXTEDITOR_VECTOR_H
 
 #include <stddef.h>
-#include <Windows.h>
-#include <memory_helper.h>
 
-#ifndef VECTOR_NAME
-#define VECTOR_NAME(type) VECTOR_##type
-#endif
+namespace TextEditor {
 
-#ifndef VECTOR_DECLARATION
-#define VECTOR_DECLARATION(type) \
-typedef struct VECTOR_NAME(type) { \
-    int size; \
-    type *pArray; \
-} VECTOR_NAME(type)
-#endif
+template <typename T>
+class Vector {
+public:
+    Vector()
+        : size_(0),
+          capacity_(0),
+          items_(NULL) {
+    }
 
-#ifndef VECTOR_CREATE_DECLARATION
-#define VECTOR_CREATE_DECLARATION(type) VECTOR_NAME(type) VECTOR_CREATE_##type(void)
-#endif
+    Vector(const Vector &other)
+        : size_(0),
+          capacity_(0),
+          items_(NULL) {
+        Assign(other);
+    }
 
-#ifndef VECTOR_INITIALIZE_DECLARATION
-#define VECTOR_INITIALIZE_DECLARATION(type) void VECTOR_INITIALIZE_##type(VECTOR_NAME(type) *pVector)
-#endif
+    ~Vector() {
+        delete[] items_;
+    }
 
-#ifndef VECTOR_PUSH_DECLARATION
-#define VECTOR_PUSH_DECLARATION(type) void VECTOR_PUSH_##type(VECTOR_NAME(type) *pVector, const type element)
-#endif
+    Vector &operator=(const Vector &other) {
+        if (this != &other) {
+            Assign(other);
+        }
+        return *this;
+    }
 
-#ifndef VECTOR_FIND_DECLARATION
-#define VECTOR_FIND_DECLARATION(type) int VECTOR_FIND_##type(VECTOR_NAME(type) *pVector, const type element)
-#endif
+    size_t size() const {
+        return size_;
+    }
 
-#ifndef VECTOR_FIND_AND_REPLACE_DECLARATION
-#define VECTOR_FIND_AND_REPLACE_DECLARATION(type) void VECTOR_FIND_AND_REPLACE_##type(VECTOR_NAME(type) *pVector, const type element, const type new_value)
-#endif
+    bool empty() const {
+        return size_ == 0;
+    }
 
-#ifndef VECTOR_REMOVE_DECLARATION
-#define VECTOR_REMOVE_DECLARATION(type) void VECTOR_REMOVE_##type(VECTOR_NAME(type) *pVector, const int index)
-#endif
+    T *data() {
+        return items_;
+    }
 
-#ifndef VECTOR_POP_DECLARATION
-#define VECTOR_POP_DECLARATION(type) void VECTOR_POP_##type(VECTOR_NAME(type) *pVector)
-#endif
+    const T *data() const {
+        return items_;
+    }
 
-#ifndef VECTOR_CLEAR_DECLARATION
-#define VECTOR_CLEAR_DECLARATION(type) void VECTOR_CLEAR_##type(VECTOR_NAME(type) *pVector)
-#endif
+    T &operator[](size_t index) {
+        return items_[index];
+    }
 
-#ifndef VECTOR_DESTROY_DECLARATION
-#define VECTOR_DESTROY_DECLARATION(type) void VECTOR_DESTROY_##type(VECTOR_NAME(type) *pVector)
-#endif
+    const T &operator[](size_t index) const {
+        return items_[index];
+    }
 
-#ifndef VECTOR_DECLARE_ALL
-#define VECTOR_DECLARE_ALL(type) \
-VECTOR_DECLARATION(type); \
-VECTOR_CREATE_DECLARATION(type); \
-VECTOR_INITIALIZE_DECLARATION(type); \
-VECTOR_PUSH_DECLARATION(type); \
-VECTOR_FIND_DECLARATION(type); \
-VECTOR_FIND_AND_REPLACE_DECLARATION(type); \
-VECTOR_POP_DECLARATION(type); \
-VECTOR_REMOVE_DECLARATION(type); \
-VECTOR_CLEAR_DECLARATION(type); \
-VECTOR_DESTROY_DECLARATION(type)
-#endif
+    void push_back(const T &value) {
+        EnsureCapacity(size_ + 1);
+        items_[size_] = value;
+        ++size_;
+    }
 
-#ifndef VECTOR_CREATE_IMPLEMENTATION
-#define VECTOR_CREATE_IMPLEMENTATION(type) \
-VECTOR_NAME(type) VECTOR_CREATE_##type(void) { \
-    VECTOR_NAME(type) vector = { 0 }; \
-    VECTOR_INITIALIZE_##type(&vector); \
-    return vector; \
-}
-#endif
+    int find(const T &value) const {
+        for (size_t i = 0; i < size_; ++i) {
+            if (items_[i] == value) {
+                return static_cast<int>(i);
+            }
+        }
 
-#ifndef VECTOR_INITIALIZE_IMPLEMENTATION
-#define VECTOR_INITIALIZE_IMPLEMENTATION(type) \
-void VECTOR_INITIALIZE_##type(VECTOR_NAME(type) *pVector) { \
-    pVector->size = 0; \
-    pVector->pArray = NULL; \
-}
-#endif
+        return -1;
+    }
 
-#ifndef VECTOR_PUSH_IMPLEMENTATION
-#define VECTOR_PUSH_IMPLEMENTATION(type) \
-void VECTOR_PUSH_##type(VECTOR_NAME(type) *pVector, const type element) { \
-    const size_t new_bytes = sizeof(type) * (pVector->size + 1); \
-    type *pTemporary = NULL; \
-    if (!pVector->pArray) { \
-        pTemporary = malloc(new_bytes); \
-        if (!pTemporary) { \
-            return; \
-        } \
-    } else { \
-        pTemporary = realloc(pVector->pArray, new_bytes); \
-        if (!pTemporary) { \
-            return; \
-        } \
-    } \
-    pVector->pArray = pTemporary; \
-    pVector->pArray[pVector->size++] = element; \
-}
-#endif
+    void replace(const T &existing_value, const T &replacement) {
+        const int index = find(existing_value);
+        if (index >= 0) {
+            items_[index] = replacement;
+        }
+    }
 
-#ifndef VECTOR_FIND_IMPLEMENTATION
-#define VECTOR_FIND_IMPLEMENTATION(type) int VECTOR_FIND_##type(VECTOR_NAME(type) *pVector, const type element) { \
-    if (!pVector->pArray) { \
-        return -1; \
-    } \
-    for (int i = 0; i < pVector->size; ++i) { \
-        if (pVector->pArray[i] == element) { \
-            return i; \
-        } \
-    } \
-    return -1; \
-}
-#endif
+    void pop_back() {
+        if (!size_) {
+            return;
+        }
 
-#ifndef VECTOR_FIND_AND_REPLACE_IMPLEMENTATION
-#define VECTOR_FIND_AND_REPLACE_IMPLEMENTATION(type) \
-void VECTOR_FIND_AND_REPLACE_##type(VECTOR_NAME(type) *pVector, const type element, const type new_value) { \
-    if (!pVector->pArray) { \
-        return; \
-    } \
-    for (int i = 0; i < pVector->size; ++i) { \
-        if (pVector->pArray[i] == element) { \
-            pVector->pArray[i] = new_value; \
-            break; \
-        } \
-    } \
-}
-#endif
+        --size_;
+        items_[size_] = T();
+    }
 
-#ifndef VECTOR_POP_IMPLEMENTATION
-#define VECTOR_POP_IMPLEMENTATION(type) \
-void VECTOR_POP_##type(VECTOR_NAME(type) *pVector) { \
-    if (!pVector->size || !pVector->pArray) { \
-        return; \
-    } \
-    if (pVector->size == 1) { \
-        VECTOR_DESTROY_##type(pVector); \
-        return; \
-    } \
-    const size_t new_bytes = sizeof(type) * (pVector->size - 1); \
-    type *pTemporary = realloc(pVector->pArray, new_bytes); \
-    if (!pTemporary) { \
-        return; \
-    } \
-    --pVector->size; \
-    pVector->pArray = pTemporary; \
-}
-#endif
+    void remove_at(size_t index) {
+        if (index >= size_) {
+            return;
+        }
 
-#ifndef VECTOR_REMOVE_IMPLEMENTATION
-#define VECTOR_REMOVE_IMPLEMENTATION(type) \
-void VECTOR_REMOVE_##type(VECTOR_NAME(type) *pVector, const int index) { \
-    if (!pVector->pArray) { \
-        return; \
-    } \
-    type *pTemporary = malloc(sizeof(type) * (pVector->size - 1)); \
-    if (!pTemporary) { \
-        return; \
-    } \
-    for (int i = 0; i < index; ++i) { \
-        pTemporary[i] = pVector->pArray[i]; \
-    } \
-    for (int i = index + 1; i < pVector->size; ++i) { \
-        pTemporary[i] = pVector->pArray[i]; \
-    } \
-    --pVector->size; \
-    pVector->pArray = pTemporary; \
-}
-#endif
+        for (size_t i = index + 1; i < size_; ++i) {
+            items_[i - 1] = items_[i];
+        }
 
-#ifndef VECTOR_CLEAR_IMPLEMENTATION
-#define VECTOR_CLEAR_IMPLEMENTATION(type) \
-void VECTOR_CLEAR_##type(VECTOR_NAME(type) *pVector) { \
-    VECTOR_DESTROY_##type(pVector); \
-}
-#endif
+        --size_;
+        items_[size_] = T();
+    }
 
-#ifndef VECTOR_DESTROY_IMPLEMENTATION
-#define VECTOR_DESTROY_IMPLEMENTATION(type) \
-void VECTOR_DESTROY_##type(VECTOR_NAME(type) *pVector) { \
-    pVector->size = 0; \
-    MEMORY_HELPER_free((void **)&pVector->pArray); \
-}
-#endif
+    void clear() {
+        delete[] items_;
+        items_ = NULL;
+        size_ = 0;
+        capacity_ = 0;
+    }
 
-#ifndef VECTOR_IMPLEMENTATION
-#define VECTOR_IMPLEMENTATION(type) \
-VECTOR_CREATE_IMPLEMENTATION(type) \
-VECTOR_INITIALIZE_IMPLEMENTATION(type) \
-VECTOR_PUSH_IMPLEMENTATION(type) \
-VECTOR_FIND_IMPLEMENTATION(type) \
-VECTOR_FIND_AND_REPLACE_IMPLEMENTATION(type) \
-VECTOR_POP_IMPLEMENTATION(type) \
-VECTOR_REMOVE_IMPLEMENTATION(type) \
-VECTOR_CLEAR_IMPLEMENTATION(type) \
-VECTOR_DESTROY_IMPLEMENTATION(type)
-#endif
+private:
+    void Assign(const Vector &other) {
+        clear();
 
-VECTOR_DECLARE_ALL(LPWSTR);
+        if (!other.size_) {
+            return;
+        }
+
+        items_ = new T[other.capacity_];
+        capacity_ = other.capacity_;
+        size_ = other.size_;
+
+        for (size_t i = 0; i < size_; ++i) {
+            items_[i] = other.items_[i];
+        }
+    }
+
+    void EnsureCapacity(size_t requested_capacity) {
+        if (requested_capacity <= capacity_) {
+            return;
+        }
+
+        size_t new_capacity = capacity_ ? capacity_ * 2 : 4;
+        if (new_capacity < requested_capacity) {
+            new_capacity = requested_capacity;
+        }
+
+        T *new_items = new T[new_capacity];
+        for (size_t i = 0; i < size_; ++i) {
+            new_items[i] = items_[i];
+        }
+
+        delete[] items_;
+        items_ = new_items;
+        capacity_ = new_capacity;
+    }
+
+    size_t size_;
+    size_t capacity_;
+    T *items_;
+};
+
+}  // namespace TextEditor
+
 #endif

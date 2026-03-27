@@ -1,103 +1,86 @@
-#ifndef RIBBON_PORTED_H
-#define RIBBON_PORTED_H
+#ifndef TEXTEDITOR_RIBBON_PORTED_H
+#define TEXTEDITOR_RIBBON_PORTED_H
 
-#include <windows.h>
+#include <Windows.h>
 
 #ifndef REFPROPERTYKEY
 #define REFPROPERTYKEY const PROPERTYKEY * __MIDL_CONST
 #endif
 
-extern const GUID IID_IUnknown;
+namespace TextEditor {
+namespace ribbon {
+
+enum ViewType {
+    kViewTypeRibbon = 1
+};
+
+enum ViewVerb {
+    kViewVerbCreate,
+    kViewVerbDestroy,
+    kViewVerbSize,
+    kViewVerbError
+};
+
+enum CommandType {
+    kCommandTypeAction
+};
+
+enum ExecutionVerb {
+    kExecutionVerbExecute,
+    kExecutionVerbPreview,
+    kExecutionVerbCancelPreview
+};
+
+struct IUISimplePropertySet : public IUnknown {
+    virtual HRESULT STDMETHODCALLTYPE GetValue(PROPERTYKEY *key, PROPVARIANT *value) = 0;
+};
+
+struct IUICommandHandler : public IUnknown {
+    virtual HRESULT STDMETHODCALLTYPE Execute(UINT32 command_id,
+                                              ExecutionVerb verb,
+                                              const PROPERTYKEY *key,
+                                              const PROPVARIANT *current_value,
+                                              IUISimplePropertySet *command_execution_properties) = 0;
+    virtual HRESULT STDMETHODCALLTYPE UpdateProperty(UINT32 command_id,
+                                                     REFPROPERTYKEY key,
+                                                     const PROPVARIANT *current_value,
+                                                     PROPVARIANT *new_value) = 0;
+};
+
+struct IUIApplication : public IUnknown {
+    virtual HRESULT STDMETHODCALLTYPE OnViewChanged(UINT32 view_id,
+                                                    ViewType type_id,
+                                                    IUnknown *view,
+                                                    ViewVerb verb,
+                                                    INT32 reason_code) = 0;
+    virtual HRESULT STDMETHODCALLTYPE OnCreateUICommand(UINT32 command_id,
+                                                        CommandType type_id,
+                                                        IUICommandHandler **command_handler) = 0;
+    virtual HRESULT STDMETHODCALLTYPE OnDestroyUICommand(UINT32 command_id,
+                                                         CommandType type_id,
+                                                         IUICommandHandler *command_handler) = 0;
+};
+
+struct IUIFramework : public IUnknown {
+    virtual HRESULT STDMETHODCALLTYPE Initialize(HWND window, IUIApplication *application) = 0;
+    virtual HRESULT STDMETHODCALLTYPE Destroy() = 0;
+    virtual HRESULT STDMETHODCALLTYPE LoadUI(HINSTANCE instance, LPCWSTR resource_name) = 0;
+    virtual HRESULT STDMETHODCALLTYPE GetView(UINT32 view_id, REFIID riid, void **view) = 0;
+};
+
+struct IUIRibbon : public IUnknown {
+    virtual HRESULT STDMETHODCALLTYPE GetHeight(UINT32 *height) = 0;
+    virtual HRESULT STDMETHODCALLTYPE LoadSettingsFromStream(IStream *stream) = 0;
+    virtual HRESULT STDMETHODCALLTYPE SaveSettingsToStream(IStream *stream) = 0;
+};
+
 extern const GUID IID_IUIFramework;
 extern const GUID IID_IUIApplication;
 extern const GUID IID_IUIRibbon;
 extern const GUID IID_IUICommandHandler;
 extern const GUID CLSID_UIRibbonFramework;
 
-typedef enum UI_VIEWTYPE {
-    UI_VIEWTYPE_RIBBON = 1
-} UI_VIEWTYPE;
+}  // namespace ribbon
+}  // namespace TextEditor
 
-typedef enum UI_VIEWVERB {
-    UI_VIEWVERB_CREATE,
-    UI_VIEWVERB_DESTROY,
-    UI_VIEWVERB_SIZE,
-    UI_VIEWVERB_ERROR
-} UI_VIEWVERB;
-
-typedef enum UI_COMMANDTYPE {
-    UI_COMMANDTYPE_ACTION
-} UI_COMMANDTYPE;
-
-typedef enum UI_EXECUTIONVERB {
-    UI_EXECUTIONVERB_EXECUTE,
-    UI_EXECUTIONVERB_PREVIEW,
-    UI_EXECUTIONVERB_CANCELPREVIEW
-} UI_EXECUTIONVERB;
-
-typedef struct IUIApplication IUIApplication;
-typedef struct IUIFramework IUIFramework;
-typedef struct IUIRibbon IUIRibbon;
-typedef struct IUISimplePropertySet IUISimplePropertySet;
-typedef struct IUICommandHandler IUICommandHandler;
-
-typedef struct IUIApplicationVtbl {
-    HRESULT(STDMETHODCALLTYPE *QueryInterface)(IUIApplication *This, REFIID riid, void **ppvObject);
-    ULONG(STDMETHODCALLTYPE *AddRef)(IUIApplication *This);
-    ULONG(STDMETHODCALLTYPE *Release)(IUIApplication *This);
-    HRESULT(STDMETHODCALLTYPE *OnViewChanged)(IUIApplication *This, UINT32 viewId, UI_VIEWTYPE typeId, IUnknown *view, UI_VIEWVERB verb, INT32 uReasonCode);
-    HRESULT(STDMETHODCALLTYPE *OnCreateUICommand)(IUIApplication *This, UINT32 commandId, UI_COMMANDTYPE typeId, IUICommandHandler **commandHandler);
-    HRESULT(STDMETHODCALLTYPE *OnDestroyUICommand)(IUIApplication *This, UINT32 commandId, UI_COMMANDTYPE typeId, IUICommandHandler *commandHandler);
-} IUIApplicationVtbl;
-
-struct IUIApplication {
-    const IUIApplicationVtbl *lpVtbl;
-};
-
-typedef struct IUIFrameworkVtbl {
-    HRESULT(STDMETHODCALLTYPE *QueryInterface)(IUIFramework *This, REFIID riid, void **ppvObject);
-    ULONG(STDMETHODCALLTYPE *AddRef)(IUIFramework *This);
-    ULONG(STDMETHODCALLTYPE *Release)(IUIFramework *This);
-    HRESULT(STDMETHODCALLTYPE *Initialize)(IUIFramework *This, HWND hwnd, IUIApplication *application);
-    HRESULT(STDMETHODCALLTYPE *Destroy)(IUIFramework *This);
-    HRESULT(STDMETHODCALLTYPE *LoadUI)(IUIFramework *This, HINSTANCE instance, LPCWSTR resourceName);
-    HRESULT(STDMETHODCALLTYPE *GetView)(IUIFramework *This, UINT32 viewId, REFIID riid, void **ppv);
-} IUIFrameworkVtbl;
-
-struct IUIFramework {
-    const IUIFrameworkVtbl *lpVtbl;
-};
-
-typedef struct IUIRibbonVtbl {
-    HRESULT(STDMETHODCALLTYPE *QueryInterface)(IUIRibbon *This, REFIID riid, void **ppvObject);
-    ULONG(STDMETHODCALLTYPE *AddRef)(IUIRibbon *This);
-    ULONG(STDMETHODCALLTYPE *Release)(IUIRibbon *This);
-    HRESULT(STDMETHODCALLTYPE *GetHeight)(IUIRibbon *This, UINT32 *cy);
-    HRESULT(STDMETHODCALLTYPE *LoadSettingsFromStream)(IUIRibbon *This, IStream *pStream);
-    HRESULT(STDMETHODCALLTYPE *SaveSettingsToStream)(IUIRibbon *This, IStream *pStream);
-} IUIRibbonVtbl;
-
-struct IUIRibbon {
-    const IUIRibbonVtbl *lpVtbl;
-};
-
-typedef struct IUISimplePropertySetVtbl {
-    HRESULT(STDMETHODCALLTYPE *GetValue)(IUISimplePropertySet *This, PROPERTYKEY *key, PROPVARIANT *value);
-} IUISimplePropertySetVtbl;
-
-struct IUISimplePropertySet {
-    const IUISimplePropertySetVtbl *lpVtbl;
-};
-
-typedef struct IUICommandHandlerVtbl {
-    HRESULT(STDMETHODCALLTYPE *QueryInterface)(IUICommandHandler *This, REFIID riid, void **ppvObject);
-    ULONG(STDMETHODCALLTYPE *AddRef)(IUICommandHandler *This);
-    ULONG(STDMETHODCALLTYPE *Release)(IUICommandHandler *This);
-    HRESULT(STDMETHODCALLTYPE *Execute)(IUICommandHandler *This, UINT32 commandId, UI_EXECUTIONVERB verb, const PROPERTYKEY *key, const PROPVARIANT *currentValue, IUISimplePropertySet *commandExecutionProperties);
-    HRESULT(STDMETHODCALLTYPE *UpdateProperty)(IUICommandHandler *This, UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue);
-} IUICommandHandlerVtbl;
-
-struct IUICommandHandler {
-    const IUICommandHandlerVtbl *lpVtbl;
-};
 #endif

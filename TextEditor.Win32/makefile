@@ -29,18 +29,18 @@ ifdef USE_CRT_MAIN
     LINKS += -nostdlib -lmsvcrt -lkernel32 -luser32 -lgdi32 -limm32 -lcomdlg32 -ladvapi32
 endif
 
-CXXFLAGS = -Wall -Wextra -pedantic -O3 -Ofast -std=c2x $(UNICODE) $(CRT_MAIN) -D_WIN32_WINNT=$(WINDOWS_VERSION) -march=$(ARCH) -mtune=$(ARCH) -m$(BIT) -mwindows
+CXXFLAGS = -Wall -Wextra -pedantic -O3 -Ofast -std=gnu++98 -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-use-cxa-atexit $(UNICODE) $(CRT_MAIN) -D_WIN32_WINNT=$(WINDOWS_VERSION) -march=$(ARCH) -mtune=$(ARCH) -m$(BIT) -mwindows
 
 TARGET = $(BUILD_DIR)/TextEditor.exe
-SRCS = $(wildcard $(SOURCE_DIR)/*.c)
-OBJS = $(SRCS:$(SOURCE_DIR)/%.c=$(BUILD_DIR)/%.o)
+SRCS = $(wildcard $(SOURCE_DIR)/*.cpp)
+OBJS = $(SRCS:$(SOURCE_DIR)/%.cpp=$(BUILD_DIR)/%.o)
 
 all: $(BUILD_DIR) $(TARGET) RESOURCES
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-$(BUILD_DIR)/%.o: $(SOURCE_DIR)/%.c | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: $(SOURCE_DIR)/%.cpp | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@ -I$(INCLUDE_DIR)
 
 $(TARGET): $(OBJS) $(BUILD_DIR)/resource.o $(BUILD_DIR)/ribbon.o

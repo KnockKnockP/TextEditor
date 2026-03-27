@@ -1,77 +1,85 @@
-#ifndef WINDOWS_HELPER_H
-#define WINDOWS_HELPER_H
+#ifndef TEXTEDITOR_WINDOWS_HELPER_H
+#define TEXTEDITOR_WINDOWS_HELPER_H
 
-#include <stdint.h>
-#include <signal.h>
+#include <Windows.h>
 #include <dwmapi.h>
 #include <Uxtheme.h>
-#include <Windows.h>
+#include <signal.h>
+
 #include <string_utilities.h>
 
-#ifndef WINDOWS_HELPER_THROW
-#define WINDOWS_HELPER_THROW() raise(SIGABRT)
-//#define WINDOWS_HELPER_THROW() for (;;) {}
-#endif
+namespace TextEditor {
 
-#ifndef WINDOWS_HELPER_GET_FUNCTION_DECLARATION
-#define WINDOWS_HELPER_GET_FUNCTION_DECLARATION(function) \
-extern function##_fetched function##_saved; \
-function##_fetched WINDOWS_HELPER_get_##function(void)
-#endif
+class Win32Api {
+public:
+    enum DocumentInterface {
+        kDocumentNone,
+        kDocumentMdi,
+        kDocumentSdi,
+        kDocumentTdi
+    };
 
-#ifndef WINDOWS_HELPER_TRANSPARENT_RGB
-#define WINDOWS_HELPER_TRANSPARENT_RGB RGB(200, 201, 202)
-#endif
+    enum Style {
+        kStyleNone,
+        kStyleClassic,
+        kStyleAero,
+        kStyleMetro
+    };
 
-typedef enum _WINDOWS_HELPER_DOCUMENT_INTERFACE {
-    WINDOWS_HELPER_DOCUMENT_INTERFACE_NONE,
-    MDI, //Windows 3.0 ~ 3.2, NT 3.1 ~ NT 3.51
-    SDI, //Windows 1.0 ~ 2.12, 95 ~ ME, NT 4.0 ~ 2000
-    TDI //Windows XP ~ Windows 11
-} WINDOWS_HELPER_DOCUMENT_INTERFACE;
+    typedef int (WINAPI *AddFontResourceExFunction)(LPCTSTR name, DWORD flags, PVOID reserved);
+    typedef BOOL (WINAPI *RemoveFontResourceExFunction)(LPCTSTR name, DWORD flags, PVOID reserved);
+    typedef HIMC (WINAPI *ImmGetContextFunction)(HWND window);
+    typedef LONG (WINAPI *ImmGetCompositionStringFunction)(HIMC input_context, DWORD index, LPVOID buffer, DWORD bytes);
+    typedef BOOL (WINAPI *ImmReleaseContextFunction)(HWND window, HIMC input_context);
+    typedef HTHEME (WINAPI *OpenThemeDataFunction)(HWND window, LPCWSTR class_list);
+    typedef HRESULT (WINAPI *DrawThemeBackgroundFunction)(HTHEME theme, HDC hdc, int part_id, int state_id, LPCRECT rect, LPCRECT clip_rect);
+    typedef HRESULT (WINAPI *CloseThemeDataFunction)(HTHEME theme);
+    typedef HRESULT (WINAPI *DwmEnableBlurBehindWindowFunction)(HWND window, const DWM_BLURBEHIND *blur_behind);
+    typedef HRESULT (WINAPI *DwmGetColorizationColorFunction)(DWORD *color, BOOL *opaque_blend);
 
-typedef enum _WINDOWS_HELPER_STYLE {
-    WINDOWS_HELPER_DOCUMENT_STYLE_NONE,
-    CLASSIC, //Windows 1.0 ~ ME, NT 3.1 ~ XP
-    AERO, //Windows Vista ~ 7,
-    METRO //Also known as second worst design known to man
-} WINDOWS_HELPER_STYLE;
+    static void Initialize();
 
-typedef int (WINAPI *AddFontResourceEx_fetched)(LPCTSTR name, DWORD fl, PVOID res);
-typedef BOOL (WINAPI *RemoveFontResourceEx_fetched)(LPCTSTR name, DWORD fl, PVOID pdv);
-typedef HIMC (WINAPI *ImmGetContext_fetched)(HWND unnamedParam1);
-typedef LONG (WINAPI *ImmGetCompositionString_fetched)(HIMC unnamedParam1, DWORD unnamedParam2, LPVOID lpBuf, DWORD dwBufLen);
-typedef BOOL (WINAPI *ImmReleaseContext_fetched)(HWND unnamedParam1, HIMC unnamedParam2);
-typedef HTHEME (WINAPI *OpenThemeData_fetched)(HWND hwnd, LPCWSTR pszClassList);
-typedef HRESULT (WINAPI *DrawThemeBackground_fetched)(HTHEME hTheme, HDC hdc, int iPartId, int iStateId, LPCRECT pRect, LPCRECT pClipRect);
-typedef HRESULT (WINAPI *CloseThemeData_fetched)(HTHEME hTheme);
-typedef HRESULT (WINAPI *DwmEnableBlurBehindWindow_fetched)(HWND hWnd, const DWM_BLURBEHIND *pBlurBehind);
-typedef HRESULT (WINAPI *DwmGetColorizationColor_fetched)(DWORD *pcrColorization, BOOL *pfOpaqueBlend);
+    static DocumentInterface document_interface();
+    static Style style();
 
-extern BYTE WINDOWS_HELPER_document_type, WINDOWS_HELPER_style;
+    static AddFontResourceExFunction AddFontResourceEx();
+    static RemoveFontResourceExFunction RemoveFontResourceEx();
+    static ImmGetContextFunction ImmGetContext();
+    static ImmGetCompositionStringFunction ImmGetCompositionString();
+    static ImmReleaseContextFunction ImmReleaseContext();
+    static OpenThemeDataFunction OpenThemeData();
+    static DrawThemeBackgroundFunction DrawThemeBackground();
+    static CloseThemeDataFunction CloseThemeData();
+    static DwmEnableBlurBehindWindowFunction DwmEnableBlurBehindWindow();
+    static DwmGetColorizationColorFunction DwmGetColorizationColor();
 
-FARPROC WINDOWS_HELPER_get_function(LPCTSTR pLibrary_name, LPCSTR pFunction_name);
+    static bool FileExists(LPCTSTR path);
+    static HANDLE ShowFileDialog(HWND owner, bool open_file, WideString *file_name);
 
-WINDOWS_HELPER_GET_FUNCTION_DECLARATION(AddFontResourceEx);
-WINDOWS_HELPER_GET_FUNCTION_DECLARATION(RemoveFontResourceEx);
-WINDOWS_HELPER_GET_FUNCTION_DECLARATION(ImmGetContext);
-WINDOWS_HELPER_GET_FUNCTION_DECLARATION(ImmGetCompositionString);
-WINDOWS_HELPER_GET_FUNCTION_DECLARATION(ImmReleaseContext);
-WINDOWS_HELPER_GET_FUNCTION_DECLARATION(OpenThemeData);
-WINDOWS_HELPER_GET_FUNCTION_DECLARATION(DrawThemeBackground);
-WINDOWS_HELPER_GET_FUNCTION_DECLARATION(CloseThemeData);
-WINDOWS_HELPER_GET_FUNCTION_DECLARATION(DwmEnableBlurBehindWindow);
-WINDOWS_HELPER_GET_FUNCTION_DECLARATION(DwmGetColorizationColor);
+    static void Warning(LPCTSTR message);
+    static void Error(const char *message);
+    static void Error(const wchar_t *message);
+    static void Error(const WideString &message);
 
-void WINDOWS_HELPER_set_types(void);
+private:
+    static FARPROC GetFunction(LPCTSTR library_name, LPCSTR function_name);
 
-BOOL WINDOWS_HELPER_file_exists(LPCTSTR file);
-HANDLE WINDOWS_HELPER_file_dialog(const HWND owner, const BOOL is_open, WIDE_STRING *pFile_name);
+    static void RaiseFatalError(const WideString &message);
 
-void WINDOWS_HELPER_warning(LPCTSTR pContents);
+    static DocumentInterface document_interface_;
+    static Style style_;
+    static AddFontResourceExFunction add_font_resource_ex_;
+    static RemoveFontResourceExFunction remove_font_resource_ex_;
+    static ImmGetContextFunction imm_get_context_;
+    static ImmGetCompositionStringFunction imm_get_composition_string_;
+    static ImmReleaseContextFunction imm_release_context_;
+    static OpenThemeDataFunction open_theme_data_;
+    static DrawThemeBackgroundFunction draw_theme_background_;
+    static CloseThemeDataFunction close_theme_data_;
+    static DwmEnableBlurBehindWindowFunction dwm_enable_blur_behind_window_;
+    static DwmGetColorizationColorFunction dwm_get_colorization_color_;
+};
 
-void WINDOWS_HELPER_error_a(LPCSTR pContents);
-void WINDOWS_HELPER_error_w(LPCWSTR pContents);
-void WINDOWS_HELPER_error_ws(WIDE_STRING *pContents);
-void WINDOWS_HELPER_error(LPCTSTR pContents);
+}  // namespace TextEditor
+
 #endif
