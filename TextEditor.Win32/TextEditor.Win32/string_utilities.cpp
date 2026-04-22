@@ -12,37 +12,136 @@ namespace TextEditor {
 
 namespace {
 
-bool IsUtf8Boundary(size_t size, size_t index, size_t cluster_size) {
-    return size >= cluster_size && (index + cluster_size) <= size;
+void ClampSlice(size_t total_length, size_t *start, size_t *slice_length) {
+    if (*start > total_length) {
+        *start = total_length;
+    }
+
+    const size_t available = total_length - *start;
+    if (*slice_length > available) {
+        *slice_length = available;
+    }
 }
 
-bool IsUtf8Follower(const BYTE *bytes, size_t index) {
-    return (bytes[index] & 0xC0) == 0x80;
+bool IsUtf8Follower(BYTE byte) {
+    return (byte & 0xC0) == 0x80;
 }
 
-bool IsUtf8Cluster1(BYTE byte) {
-    return (byte & 0x80) == 0x00;
+bool DecodeUtf8Character(const BYTE *bytes, size_t size, size_t index, uint32_t *character, size_t *consumed) {
+    if (index >= size) {
+        *character = 0;
+        *consumed = 0;
+        return false;
+    }
+
+    const BYTE lead = bytes[index];
+    if ((lead & 0x80) == 0x00) {
+        *character = lead;
+        *consumed = 1;
+        return true;
+    }
+
+    if (lead >= 0xC2 &&
+        lead <= 0xDF &&
+        (index + 1) < size &&
+        IsUtf8Follower(bytes[index + 1])) {
+        *character = static_cast<uint32_t>(lead & 0x1F);
+        *character = (*character << 6) | static_cast<uint32_t>(bytes[index + 1] & 0x3F);
+        *consumed = 2;
+        return true;
+    }
+
+    if (lead == 0xE0 &&
+        (index + 2) < size &&
+        bytes[index + 1] >= 0xA0 &&
+        bytes[index + 1] <= 0xBF &&
+        IsUtf8Follower(bytes[index + 2])) {
+        *character = static_cast<uint32_t>(lead & 0x0F);
+        *character = (*character << 6) | static_cast<uint32_t>(bytes[index + 1] & 0x3F);
+        *character = (*character << 6) | static_cast<uint32_t>(bytes[index + 2] & 0x3F);
+        *consumed = 3;
+        return true;
+    }
+
+    if (((lead >= 0xE1 && lead <= 0xEC) || (lead >= 0xEE && lead <= 0xEF)) &&
+        (index + 2) < size &&
+        IsUtf8Follower(bytes[index + 1]) &&
+        IsUtf8Follower(bytes[index + 2])) {
+        *character = static_cast<uint32_t>(lead & 0x0F);
+        *character = (*character << 6) | static_cast<uint32_t>(bytes[index + 1] & 0x3F);
+        *character = (*character << 6) | static_cast<uint32_t>(bytes[index + 2] & 0x3F);
+        *consumed = 3;
+        return true;
+    }
+
+    if (lead == 0xED &&
+        (index + 2) < size &&
+        bytes[index + 1] >= 0x80 &&
+        bytes[index + 1] <= 0x9F &&
+        IsUtf8Follower(bytes[index + 2])) {
+        *character = static_cast<uint32_t>(lead & 0x0F);
+        *character = (*character << 6) | static_cast<uint32_t>(bytes[index + 1] & 0x3F);
+        *character = (*character << 6) | static_cast<uint32_t>(bytes[index + 2] & 0x3F);
+        *consumed = 3;
+        return true;
+    }
+
+    if (lead == 0xF0 &&
+        (index + 3) < size &&
+        bytes[index + 1] >= 0x90 &&
+        bytes[index + 1] <= 0xBF &&
+        IsUtf8Follower(bytes[index + 2]) &&
+        IsUtf8Follower(bytes[index + 3])) {
+        *character = static_cast<uint32_t>(lead & 0x07);
+        *character = (*character << 6) | static_cast<uint32_t>(bytes[index + 1] & 0x3F);
+        *character = (*character << 6) | static_cast<uint32_t>(bytes[index + 2] & 0x3F);
+        *character = (*character << 6) | static_cast<uint32_t>(bytes[index + 3] & 0x3F);
+        *consumed = 4;
+        return true;
+    }
+
+    if (lead >= 0xF1 &&
+        lead <= 0xF3 &&
+        (index + 3) < size &&
+        IsUtf8Follower(bytes[index + 1]) &&
+        IsUtf8Follower(bytes[index + 2]) &&
+        IsUtf8Follower(bytes[index + 3])) {
+        *character = static_cast<uint32_t>(lead & 0x07);
+        *character = (*character << 6) | static_cast<uint32_t>(bytes[index + 1] & 0x3F);
+        *character = (*character << 6) | static_cast<uint32_t>(bytes[index + 2] & 0x3F);
+        *character = (*character << 6) | static_cast<uint32_t>(bytes[index + 3] & 0x3F);
+        *consumed = 4;
+        return true;
+    }
+
+    if (lead == 0xF4 &&
+        (index + 3) < size &&
+        bytes[index + 1] >= 0x80 &&
+        bytes[index + 1] <= 0x8F &&
+        IsUtf8Follower(bytes[index + 2]) &&
+        IsUtf8Follower(bytes[index + 3])) {
+        *character = static_cast<uint32_t>(lead & 0x07);
+        *character = (*character << 6) | static_cast<uint32_t>(bytes[index + 1] & 0x3F);
+        *character = (*character << 6) | static_cast<uint32_t>(bytes[index + 2] & 0x3F);
+        *character = (*character << 6) | static_cast<uint32_t>(bytes[index + 3] & 0x3F);
+        *consumed = 4;
+        return true;
+    }
+
+    *character = 0;
+    *consumed = 1;
+    return false;
 }
 
-bool IsUtf8Cluster2(const BYTE *bytes, size_t size, size_t index) {
-    return IsUtf8Boundary(size, index, 2) &&
-           ((bytes[index] & 0xE0) == 0xC0) &&
-           IsUtf8Follower(bytes, index + 1);
-}
+void AppendCodePoint(WideString *wide_string, uint32_t character) {
+    if (character <= 0xFFFF) {
+        wide_string->AppendChar(static_cast<wchar_t>(character));
+        return;
+    }
 
-bool IsUtf8Cluster3(const BYTE *bytes, size_t size, size_t index) {
-    return IsUtf8Boundary(size, index, 3) &&
-           ((bytes[index] & 0xF0) == 0xE0) &&
-           IsUtf8Follower(bytes, index + 1) &&
-           IsUtf8Follower(bytes, index + 2);
-}
-
-bool IsUtf8Cluster4(const BYTE *bytes, size_t size, size_t index) {
-    return IsUtf8Boundary(size, index, 4) &&
-           ((bytes[index] & 0xF8) == 0xF0) &&
-           IsUtf8Follower(bytes, index + 1) &&
-           IsUtf8Follower(bytes, index + 2) &&
-           IsUtf8Follower(bytes, index + 3);
+    character -= 0x10000;
+    wide_string->AppendChar(static_cast<wchar_t>(0xD800 + (character >> 10)));
+    wide_string->AppendChar(static_cast<wchar_t>(0xDC00 + (character & 0x3FF)));
 }
 
 }  // namespace
@@ -100,24 +199,33 @@ TCHAR *TStringBuffer::Clone(LPCTSTR value) {
 }
 
 WideString::WideString()
-    : value_(new wchar_t[1]) {
+    : value_(NULL),
+      length_(0),
+      capacity_(0) {
+    EnsureCapacity(1);
     value_[0] = L'\0';
     UpdateLines();
 }
 
 WideString::WideString(const char *ansi_string)
-    : value_(NULL) {
-    AssignWide(FromAnsi(ansi_string));
+    : value_(NULL),
+      length_(0),
+      capacity_(0) {
+    AssignWide(FromAnsi(ansi_string ? ansi_string : ""));
 }
 
 WideString::WideString(const wchar_t *wide_string)
-    : value_(NULL) {
-    AssignWide(CloneWide(wide_string));
+    : value_(NULL),
+      length_(0),
+      capacity_(0) {
+    AssignWide(CloneWide(wide_string ? wide_string : L""));
 }
 
 WideString::WideString(const WideString &other)
-    : value_(NULL) {
-    AssignWide(CloneWide(other.c_str()));
+    : value_(NULL),
+      length_(0),
+      capacity_(0) {
+    AssignWide(CloneWide(other.c_str(), other.length()));
 }
 
 WideString::~WideString() {
@@ -127,7 +235,7 @@ WideString::~WideString() {
 
 WideString &WideString::operator=(const WideString &other) {
     if (this != &other) {
-        AssignWide(CloneWide(other.c_str()));
+        AssignWide(CloneWide(other.c_str(), other.length()));
     }
 
     return *this;
@@ -138,18 +246,16 @@ const wchar_t *WideString::c_str() const {
 }
 
 size_t WideString::length() const {
-    return wcslen(c_str());
+    return length_;
 }
 
 bool WideString::empty() const {
-    return length() == 0;
+    return length_ == 0;
 }
 
 TStringBuffer WideString::ToTString() const {
 #ifdef UNICODE
-    const size_t characters = length() + 1;
-    wchar_t *clone = new wchar_t[characters];
-    wcscpy(clone, c_str());
+    wchar_t *clone = CloneWide(c_str(), length_);
     return TStringBuffer(clone);
 #else
     return TStringBuffer(ToAnsi(c_str()));
@@ -157,221 +263,211 @@ TStringBuffer WideString::ToTString() const {
 }
 
 void WideString::AppendChar(wchar_t character) {
-    InsertChar(length(), character);
+    InsertChar(length_, character);
 }
 
 void WideString::InsertChar(size_t position, wchar_t character) {
-    const size_t old_length = length();
-    wchar_t *text = new wchar_t[old_length + 2];
-
-    if (position > old_length) {
-        position = old_length;
-    }
-
-    for (size_t i = 0; i < position; ++i) {
-        text[i] = value_[i];
-    }
-
-    text[position] = character;
-
-    for (size_t i = position; i < old_length; ++i) {
-        text[i + 1] = value_[i];
-    }
-
-    text[old_length + 1] = L'\0';
-    AssignWide(text);
+    wchar_t text[2] = { character, L'\0' };
+    InsertWide(position, text);
 }
 
 void WideString::AppendAnsi(const char *text) {
-    InsertAnsi(length(), text);
+    InsertAnsi(length_, text);
 }
 
 void WideString::InsertAnsi(size_t position, const char *text) {
-    wchar_t *wide = FromAnsi(text);
+    wchar_t *wide = FromAnsi(text ? text : "");
     InsertWide(position, wide);
     delete[] wide;
 }
 
 void WideString::AppendWide(const wchar_t *text) {
-    InsertWide(length(), text);
+    InsertWide(length_, text);
 }
 
 void WideString::InsertWide(size_t position, const wchar_t *text) {
-    const size_t current_length = length();
+    if (!text || !text[0]) {
+        return;
+    }
+
     const size_t additional_length = wcslen(text);
-    wchar_t *combined = new wchar_t[current_length + additional_length + 1];
-
-    if (position > current_length) {
-        position = current_length;
+    if (position > length_) {
+        position = length_;
     }
 
-    size_t write_index = 0;
-    for (; write_index < position; ++write_index) {
-        combined[write_index] = value_[write_index];
+    EnsureCapacity(length_ + additional_length + 1);
+    for (size_t i = length_ + 1; i > position; --i) {
+        value_[i + additional_length - 1] = value_[i - 1];
     }
 
-    for (size_t i = 0; i < additional_length; ++i, ++write_index) {
-        combined[write_index] = text[i];
-    }
-
-    for (size_t i = position; i < current_length; ++i, ++write_index) {
-        combined[write_index] = value_[i];
-    }
-
-    combined[write_index] = L'\0';
-    AssignWide(combined);
+    memcpy(value_ + position, text, additional_length * sizeof(wchar_t));
+    length_ += additional_length;
+    value_[length_] = L'\0';
+    UpdateLines();
 }
 
 void WideString::Append(const WideString &text) {
+    if (this == &text) {
+        WideString copy(text);
+        AppendWide(copy.c_str());
+        return;
+    }
+
     AppendWide(text.c_str());
 }
 
 void WideString::RemoveLastCharacter() {
-    if (!length()) {
+    if (!length_) {
         return;
     }
 
-    RemoveCharacterAt(length() - 1);
+    RemoveCharacterAt(length_ - 1);
 }
 
 void WideString::RemoveCharacterAt(size_t position) {
-    const size_t characters = length();
-    if (!characters || position >= characters) {
+    if (position >= length_) {
         return;
     }
 
-    wchar_t *text = new wchar_t[characters];
-    size_t write_index = 0;
-    for (size_t i = 0; i < characters; ++i) {
-        if (i != position) {
-            text[write_index++] = value_[i];
-        }
+    for (size_t i = position; i < length_; ++i) {
+        value_[i] = value_[i + 1];
     }
 
-    text[write_index] = L'\0';
-    AssignWide(text);
+    --length_;
+    UpdateLines();
 }
 
 void WideString::InsertCharAtLine(size_t line_index, size_t position, wchar_t character) {
-    WideString current_line(line(line_index));
-    current_line.InsertChar(position, character);
+    if (line_index >= lines_.size()) {
+        return;
+    }
 
-    delete[] lines_[line_index];
-    lines_[line_index] = CloneWide(current_line.c_str());
-    ConsolidateLines();
+    if (position > line_length(line_index)) {
+        position = line_length(line_index);
+    }
+
+    InsertChar(line_start(line_index) + position, character);
 }
 
 void WideString::InsertAnsiAtLine(size_t line_index, size_t position, const char *text) {
-    WideString current_line(line(line_index));
-    current_line.InsertAnsi(position, text);
+    if (line_index >= lines_.size()) {
+        return;
+    }
 
-    delete[] lines_[line_index];
-    lines_[line_index] = CloneWide(current_line.c_str());
-    ConsolidateLines();
+    if (position > line_length(line_index)) {
+        position = line_length(line_index);
+    }
+
+    InsertAnsi(line_start(line_index) + position, text);
 }
 
 void WideString::InsertWideAtLine(size_t line_index, size_t position, const wchar_t *text) {
-    WideString current_line(line(line_index));
-    current_line.InsertWide(position, text);
+    if (line_index >= lines_.size()) {
+        return;
+    }
 
-    delete[] lines_[line_index];
-    lines_[line_index] = CloneWide(current_line.c_str());
-    ConsolidateLines();
+    if (position > line_length(line_index)) {
+        position = line_length(line_index);
+    }
+
+    InsertWide(line_start(line_index) + position, text);
 }
 
 void WideString::RemoveCharacterAtLine(size_t line_index, size_t position) {
-    WideString current_line(line(line_index));
-    current_line.RemoveCharacterAt(position);
+    if (line_index >= lines_.size() || position >= line_length(line_index)) {
+        return;
+    }
 
-    delete[] lines_[line_index];
-    lines_[line_index] = CloneWide(current_line.c_str());
-    ConsolidateLines();
+    RemoveCharacterAt(line_start(line_index) + position);
 }
 
 size_t WideString::line_count() const {
     return lines_.size();
 }
 
-const wchar_t *WideString::line(size_t index) const {
-    return lines_[index];
+size_t WideString::line_length(size_t index) const {
+    if (index >= lines_.size()) {
+        return 0;
+    }
+
+    size_t start = lines_[index].start;
+    size_t slice_length = lines_[index].length;
+    ClampSlice(length_, &start, &slice_length);
+    return slice_length;
 }
 
-void WideString::ConsolidateLines() {
-    size_t total_characters = 1;
-    for (size_t i = 0; i < lines_.size(); ++i) {
-        total_characters += wcslen(lines_[i]);
-        if (i + 1 != lines_.size()) {
-            ++total_characters;
-        }
+size_t WideString::line_start(size_t index) const {
+    if (index >= lines_.size()) {
+        return length_;
     }
 
-    wchar_t *text = new wchar_t[total_characters];
-    text[0] = L'\0';
+    size_t start = lines_[index].start;
+    size_t slice_length = lines_[index].length;
+    ClampSlice(length_, &start, &slice_length);
+    return start;
+}
 
-    for (size_t i = 0; i < lines_.size(); ++i) {
-        wcscat(text, lines_[i]);
-        if (i + 1 != lines_.size()) {
-            wcscat(text, L"\n");
-        }
+WideString::LineView WideString::line_view(size_t index) const {
+    LineView view;
+    if (index >= lines_.size()) {
+        view.text = c_str() + length_;
+        view.length = 0;
+        return view;
     }
 
-    AssignWide(text);
+    size_t start = lines_[index].start;
+    size_t slice_length = lines_[index].length;
+    ClampSlice(length_, &start, &slice_length);
+
+    view.text = c_str() + start;
+    view.length = slice_length;
+    return view;
+}
+
+WideString WideString::line_string(size_t index) const {
+    const LineView view = line_view(index);
+    WideString line;
+    line.AssignWide(CloneWide(view.text, view.length));
+    return line;
 }
 
 void WideString::ExtractFileNameFromPath() {
-    const size_t characters = length();
     size_t last_separator = 0;
-
-    for (size_t i = 0; i < characters; ++i) {
-        if (value_[i] == L'\\') {
+    for (size_t i = 0; i < length_; ++i) {
+        if (value_[i] == L'\\' || value_[i] == L'/') {
             last_separator = i + 1;
         }
     }
 
-    const size_t file_name_characters = characters - last_separator;
-    wchar_t *file_name = new wchar_t[file_name_characters + 1];
-    for (size_t i = 0; i < file_name_characters; ++i) {
-        file_name[i] = value_[last_separator + i];
+    if (!last_separator) {
+        return;
     }
-    file_name[file_name_characters] = L'\0';
 
-    AssignWide(file_name);
+    const size_t file_name_length = length_ - last_separator;
+    memmove(value_, value_ + last_separator, (file_name_length + 1) * sizeof(wchar_t));
+    length_ = file_name_length;
+    UpdateLines();
 }
 
 WideString WideString::FromUtf8(const char *utf8_string) {
     WideString wide_string;
+    if (!utf8_string) {
+        return wide_string;
+    }
+
+    const BYTE *bytes = reinterpret_cast<const BYTE *>(utf8_string);
     const size_t size = strlen(utf8_string);
-    int index = 0;
+    size_t index = 0;
 
-    while (utf8_string[index]) {
+    while (index < size && bytes[index]) {
         uint32_t character = 0;
-
-        if (IsUtf8Cluster1(static_cast<BYTE>(utf8_string[index]))) {
-            character = static_cast<BYTE>(utf8_string[index++]);
-        } else if (IsUtf8Cluster2(reinterpret_cast<const BYTE *>(utf8_string), size, index)) {
-            character = static_cast<BYTE>(utf8_string[index++]) & 0x1F;
-            character = (character << 6) | (static_cast<BYTE>(utf8_string[index++]) & 0x3F);
-        } else if (IsUtf8Cluster3(reinterpret_cast<const BYTE *>(utf8_string), size, index)) {
-            character = static_cast<BYTE>(utf8_string[index++]) & 0x0F;
-            character = (character << 6) | (static_cast<BYTE>(utf8_string[index++]) & 0x3F);
-            character = (character << 6) | (static_cast<BYTE>(utf8_string[index++]) & 0x3F);
-        } else if (IsUtf8Cluster4(reinterpret_cast<const BYTE *>(utf8_string), size, index)) {
-            character = static_cast<BYTE>(utf8_string[index++]) & 0x07;
-            character = (character << 6) | (static_cast<BYTE>(utf8_string[index++]) & 0x3F);
-            character = (character << 6) | (static_cast<BYTE>(utf8_string[index++]) & 0x3F);
-            character = (character << 6) | (static_cast<BYTE>(utf8_string[index++]) & 0x3F);
+        size_t consumed = 0;
+        if (!DecodeUtf8Character(bytes, size, index, &character, &consumed)) {
+            character = '?';
         }
 
-        wchar_t converted[3] = { 0, 0, 0 };
-        converted[0] = static_cast<wchar_t>(character);
-
-        if (character >= 0x10000) {
-            character -= 0x10000;
-            converted[0] = static_cast<wchar_t>(0xD800 + (character >> 10));
-            converted[1] = static_cast<wchar_t>(0xDC00 + (character & 0x3FF));
-        }
-
-        wide_string.AppendWide(converted);
+        AppendCodePoint(&wide_string, character);
+        index += consumed;
     }
 
     return wide_string;
@@ -388,63 +484,97 @@ WideString WideString::FromTString(LPCTSTR t_string) {
 void WideString::AssignWide(wchar_t *wide_string) {
     ClearLines();
     delete[] value_;
-    value_ = wide_string;
+
+    if (!wide_string) {
+        value_ = NULL;
+        length_ = 0;
+        capacity_ = 0;
+        EnsureCapacity(1);
+        value_[0] = L'\0';
+    } else {
+        value_ = wide_string;
+        length_ = wcslen(wide_string);
+        capacity_ = length_ + 1;
+    }
+
     UpdateLines();
+}
+
+void WideString::EnsureCapacity(size_t requested_capacity) {
+    if (requested_capacity <= capacity_) {
+        return;
+    }
+
+    size_t new_capacity = capacity_ ? capacity_ * 2 : 8;
+    while (new_capacity < requested_capacity) {
+        new_capacity *= 2;
+    }
+
+    wchar_t *buffer = new wchar_t[new_capacity];
+    if (value_) {
+        memcpy(buffer, value_, (length_ + 1) * sizeof(wchar_t));
+    } else {
+        buffer[0] = L'\0';
+    }
+
+    delete[] value_;
+    value_ = buffer;
+    capacity_ = new_capacity;
 }
 
 void WideString::UpdateLines() {
     ClearLines();
 
-    const size_t characters = length();
-    size_t line_start = 0;
-
-    for (size_t i = 0; i <= characters; ++i) {
-        if (value_[i] == L'\n' || value_[i] == L'\0') {
-            const size_t line_length = i - line_start;
-            wchar_t *line = new wchar_t[line_length + 1];
-
-            for (size_t j = 0; j < line_length; ++j) {
-                line[j] = value_[line_start + j];
-            }
-
-            line[line_length] = L'\0';
+    size_t line_start_index = 0;
+    for (size_t i = 0; i <= length_; ++i) {
+        if (i == length_ || value_[i] == L'\n') {
+            LineInfo line;
+            line.start = line_start_index;
+            line.length = i - line_start_index;
             lines_.push_back(line);
-            line_start = i + 1;
+            line_start_index = i + 1;
         }
-    }
-
-    if (lines_.empty()) {
-        wchar_t *empty_line = new wchar_t[1];
-        empty_line[0] = L'\0';
-        lines_.push_back(empty_line);
     }
 }
 
 void WideString::ClearLines() {
-    for (size_t i = 0; i < lines_.size(); ++i) {
-        delete[] lines_[i];
-    }
     lines_.clear();
 }
 
 wchar_t *WideString::CloneWide(const wchar_t *text) {
-    const size_t characters = wcslen(text) + 1;
-    wchar_t *clone = new wchar_t[characters];
-    wcscpy(clone, text);
+    if (!text) {
+        return CloneWide(L"", 0);
+    }
+
+    return CloneWide(text, wcslen(text));
+}
+
+wchar_t *WideString::CloneWide(const wchar_t *text, size_t characters) {
+    if (!text) {
+        characters = 0;
+    }
+
+    wchar_t *clone = new wchar_t[characters + 1];
+    if (characters && text) {
+        memcpy(clone, text, characters * sizeof(wchar_t));
+    }
+    clone[characters] = L'\0';
     return clone;
 }
 
 wchar_t *WideString::FromAnsi(const char *ansi_string) {
-    const int characters = MultiByteToWideChar(CP_ACP, 0, ansi_string, -1, NULL, 0);
+    const char *text = ansi_string ? ansi_string : "";
+    const int characters = MultiByteToWideChar(CP_ACP, 0, text, -1, NULL, 0);
     wchar_t *wide = new wchar_t[characters];
-    MultiByteToWideChar(CP_ACP, 0, ansi_string, -1, wide, characters);
+    MultiByteToWideChar(CP_ACP, 0, text, -1, wide, characters);
     return wide;
 }
 
 char *WideString::ToAnsi(const wchar_t *wide_string) {
-    const int characters = WideCharToMultiByte(CP_ACP, 0, wide_string, -1, NULL, 0, NULL, NULL);
+    const wchar_t *text = wide_string ? wide_string : L"";
+    const int characters = WideCharToMultiByte(CP_ACP, 0, text, -1, NULL, 0, NULL, NULL);
     char *ansi = new char[characters];
-    WideCharToMultiByte(CP_ACP, 0, wide_string, -1, ansi, characters, NULL, NULL);
+    WideCharToMultiByte(CP_ACP, 0, text, -1, ansi, characters, NULL, NULL);
     return ansi;
 }
 
@@ -459,17 +589,14 @@ TextEncoding DetectEncoding(const BYTE *bytes, size_t size) {
 
     size_t index = 0;
     while (index < size && bytes[index]) {
-        if (IsUtf8Cluster1(bytes[index])) {
-            ++index;
-        } else if (IsUtf8Cluster2(bytes, size, index)) {
-            index += 2;
-        } else if (IsUtf8Cluster3(bytes, size, index)) {
-            index += 3;
-        } else if (IsUtf8Cluster4(bytes, size, index)) {
-            index += 4;
-        } else {
+        uint32_t character = 0;
+        size_t consumed = 0;
+        if (!DecodeUtf8Character(bytes, size, index, &character, &consumed)) {
             return kTextEncodingAnsi;
         }
+
+        UNREFERENCED_PARAMETER(character);
+        index += consumed;
     }
 
     return kTextEncodingUtf8;

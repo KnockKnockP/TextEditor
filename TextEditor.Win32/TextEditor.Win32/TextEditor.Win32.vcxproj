@@ -123,6 +123,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="atom_wrapper.cpp" />
+    <ClCompile Include="main_window_commands.cpp" />
+    <ClCompile Include="main_window_document_host.cpp" />
+    <ClCompile Include="main_window_document_host_mdi.cpp" />
+    <ClCompile Include="main_window_document_host_sdi.cpp" />
+    <ClCompile Include="main_window_document_host_tdi.cpp" />
+    <ClCompile Include="main_window_toolbar.cpp" />
     <ClCompile Include="ribbon_host.cpp" />
     <ClCompile Include="ribbon_ported.cpp" />
     <ClCompile Include="strings.cpp" />
@@ -147,6 +153,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main_window.h" />
+    <ClInclude Include="main_window_document_host.h" />
     <ClInclude Include="memory_helper.h" />
     <ClInclude Include="string_utilities.h" />
     <ClInclude Include="textbox.h" />

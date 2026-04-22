@@ -83,7 +83,7 @@ public:
                                                      const PROPVARIANT *current_value,
                                                      PROPVARIANT *new_value) {
         UNREFERENCED_PARAMETER(command_id);
-        UNREFERENCED_PARAMETER(key);
+        (void)key;
         UNREFERENCED_PARAMETER(current_value);
         UNREFERENCED_PARAMETER(new_value);
         return E_NOTIMPL;

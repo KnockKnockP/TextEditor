@@ -3,11 +3,18 @@
 
 namespace TextEditor {
     struct Point {
-        int x = 0, y = 0;
+        int x;
+        int y;
 
-        Point(){}
+        Point()
+            : x(0),
+              y(0) {
+        }
 
-        Point(int x_, int y_) : x(x_), y{ y_ } {}
+        Point(int x_, int y_)
+            : x(x_),
+              y(y_) {
+        }
 
         bool operator==(const Point &other) const;
     };

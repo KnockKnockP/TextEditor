@@ -10,6 +10,8 @@
 
 namespace TextEditor {
 
+class MainWindowDocumentHost;
+
 class MainWindow : public RibbonHost::Delegate {
 public:
     MainWindow();
@@ -20,13 +22,31 @@ public:
     void SaveFile();
     void Exit();
 
+    HWND hwnd() const {
+        return hwnd_;
+    }
+
+    HWND toolbar() const {
+        return toolbar_;
+    }
+
+    const Point &size() const {
+        return size_;
+    }
+
+    const WideString &font_file() const {
+        return font_file_;
+    }
+
+    const WideString &font_name() const {
+        return font_name_;
+    }
+
     virtual void OnRibbonCommand(UINT32 command_id);
     virtual void OnRibbonHeightChanged(UINT32 ribbon_height);
 
 private:
     static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_param);
-    static LRESULT CALLBACK MdiClientProcedure(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_param);
-    static LRESULT CALLBACK TabControlProcedure(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_param);
 
     LRESULT OnCreate();
     void OnSize(LPARAM l_param);
@@ -36,34 +56,19 @@ private:
 
     bool CreateMainToolbar();
     HWND CreateToolbar(HWND parent, bool rebar, const TBBUTTON *buttons);
-    TextBox *CreateMdiChild();
-    void CreateTdiChild(LPCTSTR title);
-    void AddTdiEntry(LPCTSTR title, int index);
-    void UpdateTdiStripHeight();
-    void SelectTdi(int index);
     void UpdateLayout();
-    TextBox *CurrentTextBox();
+    TextBox *CurrentTextBox() const;
 
     static WindowClass window_class_;
     static bool window_class_registered_;
 
     HWND hwnd_;
-    HWND mdi_client_;
     HWND toolbar_;
-    HWND tab_control_;
-    WNDPROC mdi_original_proc_;
-    WNDPROC tab_original_proc_;
     Point size_;
-    Point tdi_size_;
-    TextBox *active_text_box_;
     WideString font_file_;
     WideString font_name_;
     RibbonHost ribbon_host_;
-    UINT32 tdi_strip_height_;
-
-    HBITMAP tab_bitmap_;
-    HBITMAP tab_bitmap_old_;
-    HDC tab_memory_hdc_;
+    MainWindowDocumentHost *document_host_;
 };
 
 }  // namespace TextEditor

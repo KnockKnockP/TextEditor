@@ -48,6 +48,8 @@ void Win32Api::Initialize() {
             style_ = kStyleMetro;
         }
     }
+    
+    document_interface_ = kDocumentMdi;
 }
 
 Win32Api::DocumentInterface Win32Api::document_interface() {

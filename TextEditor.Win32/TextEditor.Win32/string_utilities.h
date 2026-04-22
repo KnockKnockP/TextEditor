@@ -36,6 +36,11 @@ private:
 
 class WideString {
 public:
+    struct LineView {
+        const wchar_t *text;
+        size_t length;
+    };
+
     WideString();
     explicit WideString(const char *ansi_string);
     explicit WideString(const wchar_t *wide_string);
@@ -66,24 +71,34 @@ public:
     void RemoveCharacterAtLine(size_t line, size_t position);
 
     size_t line_count() const;
-    const wchar_t *line(size_t index) const;
-
-    void ConsolidateLines();
+    size_t line_length(size_t index) const;
+    size_t line_start(size_t index) const;
+    LineView line_view(size_t index) const;
+    WideString line_string(size_t index) const;
     void ExtractFileNameFromPath();
 
     static WideString FromTString(LPCTSTR t_string);
     static WideString FromUtf8(const char *utf8_string);
 
 private:
+    struct LineInfo {
+        size_t start;
+        size_t length;
+    };
+
     void AssignWide(wchar_t *wide_string);
+    void EnsureCapacity(size_t requested_capacity);
     void UpdateLines();
     void ClearLines();
     static wchar_t *CloneWide(const wchar_t *text);
+    static wchar_t *CloneWide(const wchar_t *text, size_t characters);
     static wchar_t *FromAnsi(const char *ansi_string);
     static char *ToAnsi(const wchar_t *wide_string);
 
     wchar_t *value_;
-    Vector<wchar_t *> lines_;
+    size_t length_;
+    size_t capacity_;
+    Vector<LineInfo> lines_;
 };
 
 TextEncoding DetectEncoding(const BYTE *bytes, size_t size);

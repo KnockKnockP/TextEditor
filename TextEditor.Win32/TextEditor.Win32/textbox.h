@@ -22,7 +22,7 @@ public:
 
 class TextBox {
 public:
-    TextBox(const Point &size, WideString *font_file, WideString *font_name);
+    TextBox(const Point &size, const WideString *font_file, const WideString *font_name);
     ~TextBox();
 
     bool CreateChildWindow(HWND parent, int vertical_offset);
@@ -53,8 +53,8 @@ private:
 
         HFONT handle;
         Point size;
-        WideString *file;
-        WideString *name;
+        const WideString *file;
+        const WideString *name;
         TStringBuffer file_buffer;
         TStringBuffer name_buffer;
     };

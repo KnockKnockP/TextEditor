@@ -17,7 +17,7 @@ TextFile::TextFile()
     : encoding(kTextEncodingWide) {
 }
 
-TextBox::TextBox(const Point &size, WideString *font_file, WideString *font_name)
+TextBox::TextBox(const Point &size, const WideString *font_file, const WideString *font_name)
     : hwnd_(NULL),
       status_bar_hwnd_(NULL),
       size_(size),
@@ -127,7 +127,7 @@ void TextBox::SetCaretPosition(int x, int y) {
         y = static_cast<int>(file_.text.line_count()) - 1;
     }
 
-    const size_t characters = wcslen(file_.text.line(y));
+    const size_t characters = file_.text.line_length(y);
     if (x > static_cast<int>(characters)) {
         x = static_cast<int>(characters);
     }
@@ -344,15 +344,10 @@ void TextBox::OnChar(WPARAM w_param) {
     if (w_param == VK_BACK) {
         SetCaretPosition(caret_.x - 1, caret_.y);
 
-        const size_t line_characters = wcslen(file_.text.line(caret_.y));
+        const size_t line_characters = file_.text.line_length(caret_.y);
         if (!caret_.x && !line_characters && caret_.y) {
-            size_t position = 0;
-            for (int i = 0; i < caret_.y; ++i) {
-                position += wcslen(file_.text.line(i)) + 1;
-            }
-
-            file_.text.RemoveCharacterAt(position);
-            SetCaretPosition(static_cast<int>(wcslen(file_.text.line(caret_.y - 1))), caret_.y - 1);
+            file_.text.RemoveCharacterAt(file_.text.line_start(caret_.y) - 1);
+            SetCaretPosition(static_cast<int>(file_.text.line_length(caret_.y - 1)), caret_.y - 1);
         } else if (line_characters) {
             file_.text.RemoveCharacterAtLine(caret_.y, caret_.x);
         }
@@ -377,7 +372,7 @@ void TextBox::OnChar(WPARAM w_param) {
             character = L'\n';
             const int previous_line = caret_.y;
             SetCaretPosition(0, caret_.y);
-            file_.text.InsertCharAtLine(previous_line, wcslen(file_.text.line(previous_line)), character);
+            file_.text.InsertCharAtLine(previous_line, file_.text.line_length(previous_line), character);
             SetCaretPosition(0, previous_line + 1);
         } else {
             file_.text.InsertCharAtLine(caret_.y, caret_.x, character);
@@ -439,16 +434,16 @@ void TextBox::OnPaint() {
 
     RECT text_rect = paint.rcPaint;
     for (size_t i = 0; i < file_.text.line_count(); ++i) {
-        WideString line_text(file_.text.line(i));
+        WideString line_text(file_.text.line_string(i));
         if (!ime_text_.empty() && static_cast<int>(i) == caret_.y) {
             WideString composed;
-            const wchar_t *line = file_.text.line(i);
-            for (int j = 0; j < caret_.x; ++j) {
-                composed.AppendChar(line[j]);
+            const WideString::LineView line = file_.text.line_view(i);
+            for (int j = 0; j < caret_.x && j < static_cast<int>(line.length); ++j) {
+                composed.AppendChar(line.text[j]);
             }
             composed.Append(ime_text_);
-            for (size_t j = static_cast<size_t>(caret_.x); j < wcslen(line); ++j) {
-                composed.AppendChar(line[j]);
+            for (size_t j = static_cast<size_t>(caret_.x); j < line.length; ++j) {
+                composed.AppendChar(line.text[j]);
             }
             line_text = composed;
         }
@@ -478,9 +473,10 @@ void TextBox::UpdateTitle() {
 void TextBox::UpdateCaretPixels(HDC hdc) {
     size_t prefix_bytes = sizeof(wchar_t) * static_cast<size_t>(caret_.x);
     size_t ime_bytes = sizeof(wchar_t) * ime_text_.length();
+    const WideString::LineView line = file_.text.line_view(caret_.y);
 
     wchar_t *caret_line = reinterpret_cast<wchar_t *>(TextEditor::memory::AllocateBytes(prefix_bytes + ime_bytes + sizeof(wchar_t)));
-    memcpy(caret_line, file_.text.line(caret_.y), prefix_bytes);
+    memcpy(caret_line, line.text, prefix_bytes);
 
     size_t end = static_cast<size_t>(caret_.x);
     if (!ime_text_.empty()) {
@@ -502,7 +498,7 @@ void TextBox::UpdateCaretPixels(HDC hdc) {
 WideString TextBox::EncodingLabel() const {
     WideString encoding(Strings::Encoding());
     encoding.AppendWide(L": ");
-    encoding.AppendWide(EncodingName(file_.encoding));
+    encoding.Append(WideString::FromTString(EncodingName(file_.encoding)));
     return encoding;
 }
 

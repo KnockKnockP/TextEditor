@@ -2,6 +2,7 @@
 #define TEXTEDITOR_VECTOR_H
 
 #include <stddef.h>
+#include <new>
 
 namespace TextEditor {
 
@@ -18,18 +19,34 @@ public:
         : size_(0),
           capacity_(0),
           items_(NULL) {
-        Assign(other);
+        CopyFrom(other);
     }
 
     ~Vector() {
-        delete[] items_;
+        DestroyRange(0, size_);
+        ::operator delete(items_);
     }
 
     Vector &operator=(const Vector &other) {
         if (this != &other) {
-            Assign(other);
+            Vector copy(other);
+            swap(copy);
         }
         return *this;
+    }
+
+    void swap(Vector &other) {
+        const size_t size = size_;
+        const size_t capacity = capacity_;
+        T *items = items_;
+
+        size_ = other.size_;
+        capacity_ = other.capacity_;
+        items_ = other.items_;
+
+        other.size_ = size;
+        other.capacity_ = capacity;
+        other.items_ = items;
     }
 
     size_t size() const {
@@ -56,9 +73,13 @@ public:
         return items_[index];
     }
 
+    void reserve(size_t requested_capacity) {
+        EnsureCapacity(requested_capacity);
+    }
+
     void push_back(const T &value) {
         EnsureCapacity(size_ + 1);
-        items_[size_] = value;
+        new (items_ + size_) T(value);
         ++size_;
     }
 
@@ -85,7 +106,7 @@ public:
         }
 
         --size_;
-        items_[size_] = T();
+        items_[size_].~T();
     }
 
     void remove_at(size_t index) {
@@ -97,31 +118,30 @@ public:
             items_[i - 1] = items_[i];
         }
 
-        --size_;
-        items_[size_] = T();
+        pop_back();
     }
 
     void clear() {
-        delete[] items_;
-        items_ = NULL;
+        DestroyRange(0, size_);
         size_ = 0;
-        capacity_ = 0;
     }
 
 private:
-    void Assign(const Vector &other) {
-        clear();
-
+    void CopyFrom(const Vector &other) {
         if (!other.size_) {
             return;
         }
 
-        items_ = new T[other.capacity_];
-        capacity_ = other.capacity_;
+        EnsureCapacity(other.size_);
+        for (size_t i = 0; i < other.size_; ++i) {
+            new (items_ + i) T(other.items_[i]);
+        }
         size_ = other.size_;
+    }
 
-        for (size_t i = 0; i < size_; ++i) {
-            items_[i] = other.items_[i];
+    void DestroyRange(size_t start, size_t end) {
+        for (size_t i = end; i > start; --i) {
+            items_[i - 1].~T();
         }
     }
 
@@ -135,12 +155,13 @@ private:
             new_capacity = requested_capacity;
         }
 
-        T *new_items = new T[new_capacity];
+        T *new_items = static_cast<T *>(::operator new(sizeof(T) * new_capacity));
         for (size_t i = 0; i < size_; ++i) {
-            new_items[i] = items_[i];
+            new (new_items + i) T(items_[i]);
         }
 
-        delete[] items_;
+        DestroyRange(0, size_);
+        ::operator delete(items_);
         items_ = new_items;
         capacity_ = new_capacity;
     }
