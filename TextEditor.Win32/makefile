@@ -1,8 +1,14 @@
 CXX = gcc
+WINDRES = windres
+WINDRESFLAGS =
 UICC = "/c/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x86/uicc.exe"
+I686_TOOLS = ./Tools/i686-8.1.0-release-win32-dwarf-rt_v6-rev0/bin
+OLD_TOOLS_DIR = ./Tools/gcc_win98/bin
 
 ifdef OLD_TOOLS
-    CXX = ./Tools/gcc_win98/bin/gcc.exe
+    CXX = $(OLD_TOOLS_DIR)/gcc.exe
+else ifeq ($(BIT),32)
+    CXX = $(I686_TOOLS)/gcc.exe
 endif
 
 UNICODE = -DUNICODE -D_UNICODE -municode
@@ -11,6 +17,10 @@ CRT_MAIN = -UCRT_MAIN
 WINDOWS_VERSION = 0x0600
 ARCH=native
 BIT=64
+
+ifeq ($(BIT),32)
+    WINDRESFLAGS += -F pe-i386
+endif
 
 ifdef NO_UNICODE
     UNICODE =
@@ -23,7 +33,7 @@ RESOURCES_DIR = $(SOURCE_DIR)/Resources
 BIN_DIR = ./bin
 BUILD_DIR = $(BIN_DIR)/$(ARCH)/$(WINDOWS_VERSION)/$(UNICODE_BUILD_PATH)/$(BIT)
 
-LINKS = $(BUILD_DIR)/resource.o $(BUILD_DIR)/ribbon.o -lcomctl32 -ldwmapi -luxtheme -lole32
+LINKS = $(BUILD_DIR)/resource.o $(BUILD_DIR)/ribbon.o -lcomctl32 -ldwmapi -luxtheme -lole32 -luuid
 ifdef USE_CRT_MAIN
     CRT_MAIN = -DCRT_MAIN -ffreestanding
     LINKS += -nostdlib -lmsvcrt -lkernel32 -luser32 -lgdi32 -limm32 -lcomdlg32 -ladvapi32
@@ -47,12 +57,12 @@ $(TARGET): $(OBJS) $(BUILD_DIR)/resource.o $(BUILD_DIR)/ribbon.o
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $@ $(LINKS)
 
 $(BUILD_DIR)/resource.o: $(SOURCE_DIR)/resource.rc | $(BUILD_DIR)
-	windres $(SOURCE_DIR)/resource.rc -o $(BUILD_DIR)/resource.o
+	$(WINDRES) $(WINDRESFLAGS) $(SOURCE_DIR)/resource.rc -o $(BUILD_DIR)/resource.o
 
 $(BUILD_DIR)/ribbon.o: $(SOURCE_DIR)/ribbon.rc | $(BUILD_DIR)
 	$(UICC) $(SOURCE_DIR)/ribbon.xml ribbon.bml /header:ribbon.h /res:ribbon.rc
 	mv ./ribbon.bml ./ribbon.h ./ribbon.rc ./$(SOURCE_DIR)/
-	windres $(SOURCE_DIR)/ribbon.rc -o $(BUILD_DIR)/ribbon.o
+	$(WINDRES) $(WINDRESFLAGS) $(SOURCE_DIR)/ribbon.rc -o $(BUILD_DIR)/ribbon.o
 
 RESOURCES:
 	cp $(RESOURCES_DIR)/* $(BUILD_DIR)

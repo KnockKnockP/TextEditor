@@ -61,11 +61,19 @@ Win32Api::Style Win32Api::style() {
 }
 
 Win32Api::AddFontResourceExFunction Win32Api::AddFontResourceEx() {
+#ifdef UNICODE
     TEXTEDITOR_LOAD_FUNCTION(add_font_resource_ex_, "AddFontResourceExW", "gdi32.dll", AddFontResourceExFunction);
+#else
+    TEXTEDITOR_LOAD_FUNCTION(add_font_resource_ex_, "AddFontResourceExA", "gdi32.dll", AddFontResourceExFunction);
+#endif
 }
 
 Win32Api::RemoveFontResourceExFunction Win32Api::RemoveFontResourceEx() {
+#ifdef UNICODE
     TEXTEDITOR_LOAD_FUNCTION(remove_font_resource_ex_, "RemoveFontResourceExW", "gdi32.dll", RemoveFontResourceExFunction);
+#else
+    TEXTEDITOR_LOAD_FUNCTION(remove_font_resource_ex_, "RemoveFontResourceExA", "gdi32.dll", RemoveFontResourceExFunction);
+#endif
 }
 
 Win32Api::ImmGetContextFunction Win32Api::ImmGetContext() {
@@ -73,7 +81,11 @@ Win32Api::ImmGetContextFunction Win32Api::ImmGetContext() {
 }
 
 Win32Api::ImmGetCompositionStringFunction Win32Api::ImmGetCompositionString() {
+#ifdef UNICODE
     TEXTEDITOR_LOAD_FUNCTION(imm_get_composition_string_, "ImmGetCompositionStringW", "imm32.dll", ImmGetCompositionStringFunction);
+#else
+    TEXTEDITOR_LOAD_FUNCTION(imm_get_composition_string_, "ImmGetCompositionStringA", "imm32.dll", ImmGetCompositionStringFunction);
+#endif
 }
 
 Win32Api::ImmReleaseContextFunction Win32Api::ImmReleaseContext() {

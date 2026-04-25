@@ -102,7 +102,7 @@ void TextBox::SetFile(const TextFile &text_file) {
 
     const WideString encoding = EncodingLabel();
     const TStringBuffer encoding_text = encoding.ToTString();
-    SendMessage(status_bar_hwnd_, SB_SETTEXT, MAKEWPARAM(0, SBT_OWNERDRAW), reinterpret_cast<LPARAM>(encoding_text.c_str()));
+    SendMessage(status_bar_hwnd_, SB_SETTEXT, 0, reinterpret_cast<LPARAM>(encoding_text.c_str()));
 
     UpdateTitle();
     RequestRedraw();

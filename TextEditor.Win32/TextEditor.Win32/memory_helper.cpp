@@ -64,3 +64,7 @@ void operator delete(void *memory) {
 void operator delete[](void *memory) {
     TextEditor::memory::Free(memory);
 }
+
+extern "C" void __cxa_pure_virtual() {
+    raise(SIGABRT);
+}
