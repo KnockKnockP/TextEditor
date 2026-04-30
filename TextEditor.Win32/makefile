@@ -1,8 +1,11 @@
 CXX = gcc
-UICC = "/c/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x86/uicc.exe"
+WINDRES = windres
+UICC = "/c/Program Files (x86)/Windows Kits/10/bin/10.0.26100.0/x86/uicc.exe"
 
 ifdef OLD_TOOLS
-    CXX = ./Tools/gcc_win98/bin/gcc.exe
+    OLD_TOOLS_BIN := $(shell cygpath -am ./Tools/gcc_win98/bin)
+    CXX = "$(OLD_TOOLS_BIN)/gcc.exe"
+    WINDRES = "$(OLD_TOOLS_BIN)/windres.exe" --preprocessor="$(OLD_TOOLS_BIN)/gcc.exe -E -xc-header -DRC_INVOKED"
 endif
 
 UNICODE = -DUNICODE -D_UNICODE -municode
@@ -47,12 +50,12 @@ $(TARGET): $(OBJS) $(BUILD_DIR)/resource.o $(BUILD_DIR)/ribbon.o
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $@ $(LINKS)
 
 $(BUILD_DIR)/resource.o: $(SOURCE_DIR)/resource.rc | $(BUILD_DIR)
-	windres $(SOURCE_DIR)/resource.rc -o $(BUILD_DIR)/resource.o
+	$(WINDRES) $(SOURCE_DIR)/resource.rc -o $(BUILD_DIR)/resource.o
 
 $(BUILD_DIR)/ribbon.o: $(SOURCE_DIR)/ribbon.rc | $(BUILD_DIR)
 	$(UICC) $(SOURCE_DIR)/ribbon.xml ribbon.bml /header:ribbon.h /res:ribbon.rc
 	mv ./ribbon.bml ./ribbon.h ./ribbon.rc ./$(SOURCE_DIR)/
-	windres $(SOURCE_DIR)/ribbon.rc -o $(BUILD_DIR)/ribbon.o
+	$(WINDRES) $(SOURCE_DIR)/ribbon.rc -o $(BUILD_DIR)/ribbon.o
 
 RESOURCES:
 	cp $(RESOURCES_DIR)/* $(BUILD_DIR)

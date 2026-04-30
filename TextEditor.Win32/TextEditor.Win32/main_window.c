@@ -1,8 +1,6 @@
-#include <leak_checker.h>
+﻿#include <leak_checker.h>
 
 #include <main_window.h>
-#include <Uxtheme.h>
-#include <vssym32.h>
 #include <ribbon.h>
 #include <strings.h>
 #include <resource.h>
@@ -13,9 +11,9 @@
 
 MAIN_WINDOW main_window = { 0 };
 LONG ribbon_reference_count = 0, ribbon_command_handler_reference_count = 0;
-HBITMAP hBitmap = NULL, hBitmap_old = NULL, hBitmap_menu = NULL, hBitmap_old_menu = NULL;
-WNDPROC tdi_original = NULL, menu_bar_original = NULL;
-HDC tdi_memory_hdc = NULL, menu_memory_hdc = NULL;
+HBITMAP hBitmap_menu = NULL, hBitmap_old_menu = NULL;
+WNDPROC menu_bar_original = NULL;
+HDC menu_memory_hdc = NULL;
 
 HRESULT STDMETHODCALLTYPE IUICommandHandler_QueryInterface(IUICommandHandler *This, REFIID riid, void **ppvObject) {
     if (IsEqualIID(riid, &IID_IUnknown) || IsEqualIID(riid, &IID_IUICommandHandler)) {
@@ -260,85 +258,6 @@ HWND MAIN_WINDOW_create_toolbar(const HWND parent, const BOOL rebar, const TBBUT
     return toolbar;
 }
 
-LRESULT CALLBACK MAIN_WINDOW_tdi_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
-    switch (uMsg) {
-        case WM_PAINT: {
-            HTHEME theme = OpenThemeData_saved(hwnd, L"REBAR");
-            if (!theme) {
-                break;
-            }
-
-            /*
-                1. Paint full client.
-                2. Paint theme in tab strip.
-                3. Paint tabs.
-            */
-
-            RECT full_rect = { 0 };
-            GetClientRect(hwnd, &full_rect);
-
-            RECT full_normal_rect = { 0 };
-            full_normal_rect.right = full_rect.right - full_rect.left;
-            full_normal_rect.bottom = full_rect.bottom - full_rect.top;
-
-            if (!tdi_memory_hdc) {
-                const HDC hdc_display = CreateIC(TEXT("DISPLAY"), NULL, NULL, NULL);
-                tdi_memory_hdc = CreateCompatibleDC(hdc_display);
-
-                hBitmap = CreateCompatibleBitmap(hdc_display, full_normal_rect.right, full_normal_rect.bottom);
-                hBitmap_old = SelectObject(tdi_memory_hdc, hBitmap);
-                DeleteDC(hdc_display);
-            }
-
-            PAINTSTRUCT paint_struct = { 0 };
-            HDC hdc = BeginPaint(hwnd, &paint_struct);
-
-            SendMessage(hwnd, WM_PRINTCLIENT, (WPARAM)tdi_memory_hdc, PRF_CLIENT);
-
-            HRGN tab_region = CreateRectRgn(0, 0, 0, 0);
-            RECT tab_rect = { 0 };
-            for (int i = 0; i < TabCtrl_GetItemCount(hwnd); ++i) {
-                TabCtrl_GetItemRect(hwnd, i, &tab_rect);
-                const HRGN single_tab_region = CreateRectRgn(tab_rect.left, tab_rect.top, tab_rect.right, tab_rect.bottom);
-                CombineRgn(tab_region, tab_region, single_tab_region, RGN_OR);
-                DeleteObject(single_tab_region);
-            }
-
-            GetRgnBox(tab_region, &tab_rect);
-            DeleteObject(tab_region);
-
-            RECT toolbar_rect = { 0 };
-            if (main_window.toolbar) {
-                GetClientRect(main_window.toolbar, &toolbar_rect);
-            }
-
-            RECT to_color_rect = { 0 };
-            to_color_rect.left = tab_rect.right - tab_rect.left + 2;
-            to_color_rect.right = full_normal_rect.right;
-            to_color_rect.top = -toolbar_rect.bottom;
-            to_color_rect.bottom = tab_rect.bottom - tab_rect.top + 2;
-
-            DrawThemeBackground_saved(theme, hdc, RP_BACKGROUND, 0, &to_color_rect, NULL);
-            CloseThemeData_saved(theme);
-
-            BitBlt(hdc, full_rect.left, full_rect.top, tab_rect.right + 2, tab_rect.bottom, tdi_memory_hdc, 0, 0, SRCCOPY);
-            EndPaint(hwnd, &paint_struct);
-            return 0;
-        }
-
-        case WM_DESTROY:
-            DeleteObject(hBitmap);
-            hBitmap = NULL;
-            SelectObject(tdi_memory_hdc, hBitmap_old);
-            DeleteDC(tdi_memory_hdc);
-            hBitmap_old = NULL;
-            tdi_memory_hdc = NULL;
-            break;
-    }
-
-    return CallWindowProc(tdi_original, hwnd, uMsg, wParam, lParam);
-}
-
 LRESULT CALLBACK MAIN_WINDOW_menu_bar_DefWindowProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam) {
     switch (uMsg) {
         /*
@@ -504,7 +423,7 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                 }
                 parent_size.bottom -= menu_size.bottom;
 
-                main_window.tdi = CreateWindow(WC_TABCONTROL, TEXT(""), WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE,
+                main_window.tdi = CreateWindow(WC_TABCONTROL, TEXT(""), WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE,
                                                0, menu_size.bottom, parent_size.right, parent_size.bottom,
                                                hwnd, NULL, instance, NULL);
 
@@ -519,8 +438,6 @@ LRESULT CALLBACK MAIN_WINDOW_DefWindowProc(const HWND hwnd, const UINT uMsg, con
                 MAIN_WINDOW_create_tdi_child((const LPTSTR)pUntitled_t);
                 MEMORY_HELPER_free((void **)&pUntitled_t);
                 WIDE_STRING_destroy(&untitled);
-
-                tdi_original = (WNDPROC)SetWindowLongPtr(main_window.tdi, GWLP_WNDPROC, (LONG)MAIN_WINDOW_tdi_DefWindowProc);
             }
             return 0;
         }
